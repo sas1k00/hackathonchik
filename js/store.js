@@ -27,15 +27,37 @@
     },
     saveSession(c) { const all = read(KEY); all.unshift(c); write(KEY, all.slice(0, 30)); },
     updateLatest(c) { const all = read(KEY); if (all.length) { all[0] = c; write(KEY, all); } },
-    sessions() { return read(KEY); },
+    sessions() { return read(KEY).map(c => T.store.sanitize(c)).filter(Boolean); },
     encode(c) { return 'TMR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(c)))); },
     decode(code) {
-      const raw = code.trim().replace(/^TMR1\./, '');
-      const c = JSON.parse(decodeURIComponent(escape(atob(raw))));
-      if (c.v !== 1 || typeof c.s !== 'string' || c.s.length !== T.TOPICS.length) throw new Error('Неверный код');
-      return c;
+      const raw = String(code).trim().replace(/^TMR1\./, '');
+      let c;
+      try { c = JSON.parse(decodeURIComponent(escape(atob(raw)))); } catch (e) { throw new Error('Неверный код'); }
+      const clean = T.store.sanitize(c);
+      if (!clean) throw new Error('Неверный код');
+      return clean;
     },
-    imported() { return read(KEY_IMPORTED); },
+    /* Код приходит от пользователя: принимаем только известные темы и ошибки, иначе панель учителя может сломаться. */
+    sanitize(c) {
+      if (!c || typeof c !== 'object' || c.v !== 1) return null;
+      if (typeof c.s !== 'string' || c.s.length !== T.TOPICS.length || /[^migru]/.test(c.s)) return null;
+      const name = typeof c.n === 'string' ? c.n.trim().slice(0, 40) : '';
+      if (!name) return null;
+      const own = (obj, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(obj, k);
+      const num = (x, max) => (Number.isFinite(x) && x >= 0 && x <= max ? Math.floor(x) : 0);
+      return {
+        v: 1,
+        n: name,
+        g: T.GOALS.some(g => g.id === c.g) ? c.g : 'full',
+        t: num(c.t, 4102444800000) || Date.now(),
+        s: c.s,
+        r: Array.isArray(c.r) ? [...new Set(c.r.filter(id => own(T.TOPIC, id)))] : [],
+        m: Array.isArray(c.m) ? c.m.filter(x => Array.isArray(x) && own(T.MISCONCEPTIONS, x[0])).map(x => [x[0], num(x[1], 1000) || 1]) : [],
+        a: num(c.a, 1000),
+        demo: c.demo === true
+      };
+    },
+    imported() { return read(KEY_IMPORTED).map(c => T.store.sanitize(c)).filter(Boolean); },
     addImported(c) { const all = read(KEY_IMPORTED).filter(x => !(x.n === c.n && x.t === c.t)); all.push(c); write(KEY_IMPORTED, all); },
     clearImported() { write(KEY_IMPORTED, []); }
   };

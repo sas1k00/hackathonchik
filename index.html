@@ -1,11 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamyr — корень пробелов в знаниях</title>
   <meta name="description" content="Адаптивная диагностика по математике: находит не ошибку, а её причину.">
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1f6f5c">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
   <header class="topbar">
@@ -22,11 +26,17 @@
   <main id="app" tabindex="-1"></main>
   <footer class="foot">Tamyr · VentureHack 2026 · Трек EduTech и образование будущего</footer>
 
-  <script src="js/data.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/graph.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/teacher.js"></script>
+  <script src="js/data.js?v=4"></script>
+  <script src="js/engine.js?v=4"></script>
+  <script src="js/graph.js?v=4"></script>
+  <script src="js/store.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
+  <script src="js/teacher.js?v=4"></script>
+  <script>
+    // Офлайн-режим: работает на http(s), при открытии файла двойным кликом просто пропускается
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>

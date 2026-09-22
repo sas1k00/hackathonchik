@@ -1,8 +1,8 @@
 /*
  * Tamyr Engine — адаптивная диагностика по графу пререквизитов.
  *
- * Идея: начинаем с целевых (сложных) тем. Тема «освоена» после 2 верных ответов,
- * «пробел» — после 2 неверных (максимум 3 вопроса на тему, решает большинство).
+ * Идея: начинаем с целевых (сложных) тем. Тема «освоена», когда верных ответов на 2 больше, чем неверных,
+ * «пробел» — когда неверных на 2 больше (до 6 вопросов на тему; если банк кончился — решает большинство).
  *   • Освоил тему  → все её пререквизиты считаются освоенными (вывод, без вопросов).
  *   • Пробел в теме → спускаемся к её непроверенным пререквизитам (поиск в глубину).
  *   • Неверный ответ с меткой ошибки (misconception) указывает на «домашнюю» тему
@@ -67,7 +67,7 @@
     constructor(startTopics, opts) {
       opts = opts || {};
       this.rand = opts.rand || Math.random;
-      this.maxPerTopic = 3;
+      this.maxPerTopic = 6; // в спорных случаях задаём до 6 вопросов (весь банк темы)
       this.state = {};
       T.TOPICS.forEach(t => { this.state[t.id] = { status: S.UNKNOWN, answers: [], tested: false }; });
       this.stack = startTopics.slice().reverse();
@@ -76,8 +76,6 @@
       this.reasons = {};   // почему тема попала в проверку
       startTopics.forEach(id => { this.reasons[id] = { kind: 'goal' }; });
     }
-
-    get finished() { return this.current === null && this._nextTopic() === null; }
 
     _decided(id) { const s = this.state[id].status; return s === S.MASTERED || s === S.GAP; }
 
@@ -123,10 +121,12 @@
       const c = st.answers.filter(a => a.correct).length;
       const w = st.answers.length - c;
       const outOfQuestions = st.answers.length >= Math.min(this.maxPerTopic, questionsByTopic[id].length);
+      // Решение принимается, когда одна сторона ведёт с перевесом в 2 ответа: ВВ → освоено, НН → пробел,
+      // при 1:1 спрашиваем дальше (В Н В В → освоено). Так одна удачная догадка не решает судьбу темы.
       // «Чистое» освоение (все ответы верны) распространяется на пререквизиты;
       // освоение с ошибкой засчитывается только самой теме — угадывание не должно «закрывать» основы.
-      if (c >= 2 || (outOfQuestions && c > w)) return this._markMastered(id, w === 0);
-      if (w >= 2 || outOfQuestions) return this._markGap(id);
+      if (c - w >= 2 || (outOfQuestions && c > w)) return this._markMastered(id, w === 0);
+      if (w - c >= 2 || outOfQuestions) return this._markGap(id);
     }
 
     _markMastered(id, propagate) {

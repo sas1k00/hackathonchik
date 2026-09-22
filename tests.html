@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamyr — тесты движка</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
   <main>
@@ -18,8 +18,9 @@
       <div id="sim"></div>
     </section>
   </main>
-  <script src="js/data.js"></script>
-  <script src="js/engine.js"></script>
+  <script src="js/data.js?v=4"></script>
+  <script src="js/engine.js?v=4"></script>
+  <script src="js/store.js?v=4"></script>
   <script>
     const T = window.Tamyr;
     const out = document.getElementById('tests');
@@ -82,9 +83,26 @@
       const { r } = run(['lin'], new Set(), { skip: true });
       assert(r.gaps.includes('lin')); assert(r.rootGaps.length > 0);
     });
-    test('Не больше 3 вопросов на тему', () => {
+    test('Не больше 6 вопросов на тему, у ученика с чёткими ответами — ровно 2', () => {
       const { d } = run(T.GOALS[0].start, without('arith'));
-      T.TOPICS.forEach(t => assert(d.state[t.id].answers.length <= 3, t.id));
+      T.TOPICS.forEach(t => { const n = d.state[t.id].answers.length; assert(n === 0 || n === 2, t.id + ': ' + n); });
+    });
+    test('Правило перевеса в 2: при ответах 1:1 тема не решается, В Н В В → освоено без вывода вниз', () => {
+      const d = new T.Diagnostic(['lin'], { rand: T.rng(3) });
+      const ans = ok => { const c = d.next(); eq(c.topic, 'lin'); d.answer(c.options.findIndex(o => ok ? o.ok : (!o.ok && !o.mis))); };
+      ans(true); ans(false);
+      eq(d.state.lin.status, 'unknown', 'после 1:1');
+      ans(true);
+      eq(d.state.lin.status, 'unknown', 'после 2:1');
+      ans(true);
+      eq(d.state.lin.status, 'mastered');
+      eq(d.state.frac.status, 'unknown', 'освоение с ошибкой не распространяется вниз:');
+    });
+    test('Если банк темы исчерпан при ничьей 3:3 — пробел', () => {
+      const d = new T.Diagnostic(['arith'], { rand: T.rng(5) });
+      [true, false, true, false, true, false].forEach(ok => { const c = d.next(); d.answer(c.options.findIndex(o => ok ? o.ok : !o.ok)); });
+      eq(d.state.arith.answers.length, 6);
+      eq(d.state.arith.status, 'gap');
     });
     test('Непроверенные темы над корнем помечаются «под угрозой», а не «освоено»', () => {
       // цель — квадратные уравнения, корень — дроби; проценты и парабола не проверялись, но стоят на дробях
@@ -115,6 +133,24 @@
       for (let k = 0; k < 2; k++) { const cur = d.next(); d.answer(cur.options.findIndex(o => !o.ok && !o.mis)); }
       eq(d.state.quad.status, 'gap');
       eq(d.next().topic, 'fact');
+    });
+    test('Код ученика: кодирование и чтение дают тот же результат', () => {
+      const { r } = run(['quad'], without('frac'));
+      const c = T.store.compact('Айгерим', 'quad', r);
+      const back = T.store.decode(T.store.encode(c));
+      eq(back.s, c.s); eq(back.r, ['frac']); eq(back.n, 'Айгерим');
+    });
+    test('Код ученика: мусор и подделки отклоняются или очищаются', () => {
+      const enc = o => 'TMR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+      const good = { v: 1, n: 'X', g: 'full', t: 1, s: 'm'.repeat(T.TOPICS.length), r: [], m: [], a: 5 };
+      ['garbage', '', 'TMR1.!!!', enc({ v: 2 }), enc(Object.assign({}, good, { s: 'x'.repeat(T.TOPICS.length) })),
+       enc(Object.assign({}, good, { s: 'mm' })), enc(Object.assign({}, good, { n: '' }))].forEach(code => {
+        let threw = false; try { T.store.decode(code); } catch (e) { threw = true; }
+        assert(threw, 'должен отклонить: ' + code.slice(0, 20));
+      });
+      const bad = T.store.decode(enc(Object.assign({}, good, { r: ['frac', 'nope', '__proto__'], m: [['frac_add_across', 2], ['evil', 1], 'x'], g: 'zzz', a: -5 })));
+      eq(bad.r, ['frac']); eq(bad.m, [['frac_add_across', 2]]); eq(bad.g, 'full'); eq(bad.a, 0);
+      eq(T.store.sanitize({ v: 1, n: '<img src=x onerror=alert(1)>', s: 'm'.repeat(T.TOPICS.length) }).n, '<img src=x onerror=alert(1)>', 'имя сохраняется как текст (экранируется при выводе):');
     });
     test('Банк: 6 вопросов на каждую тему, id уникальны, варианты в вопросе не повторяются', () => {
       T.TOPICS.forEach(t => eq(T.questionsByTopic[t.id].length, 6, t.id + ':'));
@@ -159,7 +195,7 @@
       return { N, recall: tp / (tp + fn), precision: tp / (tp + fp), exact: exact / N, avgAsked: avg(all), asked0: avg(askedBy[0]), asked1: avg(askedBy[1]), asked2: avg(askedBy[2]) };
     }
     const pct = x => (100 * x).toFixed(1) + '%';
-    const full = T.TOPICS.reduce((s, t) => s + Math.min(3, T.questionsByTopic[t.id].length), 0);
+    const full = T.QUESTIONS.length;
     window.SIM = {
       tuning: simulate(42, 5000, 1000),
       holdout: simulate(777, 70000, 1000),
@@ -175,7 +211,7 @@
         <thead><tr><th>Набор</th><th>Полнота</th><th>Точность</th><th>Совпало полностью</th><th>Вопросов: без пробелов / 1 корень / 2 корня</th></tr></thead>
         <tbody>${rows.map(([n, s]) => `<tr><td>${n}</td><td>${pct(s.recall)}</td><td>${pct(s.precision)}</td><td>${pct(s.exact)}</td><td>${s.asked0.toFixed(1)} / ${s.asked1.toFixed(1)} / ${s.asked2.toFixed(1)}</td></tr>`).join('')}</tbody>
       </table></div>
-      <p class="small muted" style="margin-top:12px">По 1000 виртуальных учеников в каждом наборе. Модель ученика: знает тему → верно с вероятностью 92%; не знает → 20% (угадывание), в остальных случаях в 70% выбирает «типичную» ошибку. Это проверка алгоритма, а не данные реальных учеников. Для сравнения: 3 вопроса по каждой из 17 тем — ${full} вопросов.</p>`;
+      <p class="small muted" style="margin-top:12px">По 1000 виртуальных учеников в каждом наборе. Модель ученика: знает тему → верно с вероятностью 92%; не знает → 20% (угадывание), в остальных случаях в 70% выбирает «типичную» ошибку. Это проверка алгоритма, а не данные реальных учеников. Всего в банке ${full} вопросов.</p>`;
     window.TEST_RESULTS = results;
   </script>
 </body>

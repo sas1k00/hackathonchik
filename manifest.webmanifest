@@ -1,0 +1,15 @@
+{
+  "name": "Tamyr — корень пробелов в знаниях",
+  "short_name": "Tamyr",
+  "description": "Адаптивная диагностика по математике для ЕНТ: находит не ошибку, а её причину.",
+  "lang": "ru",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f4ef",
+  "theme_color": "#1f6f5c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
