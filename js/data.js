@@ -1,0 +1,188 @@
+/*
+ * Tamyr — граф знаний школьной алгебры (подготовка к ЕНТ).
+ * TOPICS: темы и их пререквизиты (рёбра графа).
+ * MISCONCEPTIONS: типичные ошибки мышления; home — тема, где живёт причина ошибки.
+ * QUESTIONS: у неправильных вариантов ответа есть метка mis — какую ошибку выдаёт этот выбор.
+ */
+window.Tamyr = window.Tamyr || {};
+
+Tamyr.TOPICS = [
+  { id: 'arith', short: 'Арифметика', title: 'Порядок действий', level: 0, prereq: [],
+    rule: 'Сначала скобки, затем степени, затем умножение и деление (слева направо), в конце сложение и вычитание (слева направо).',
+    example: '20 − (6 − 2) · 3 = 20 − 4 · 3 = 20 − 12 = 8' },
+  { id: 'neg', short: 'Отрицательные', title: 'Отрицательные числа', level: 0, prereq: [],
+    rule: 'Минус на минус даёт плюс. Вычесть отрицательное число — значит прибавить противоположное: a − (−b) = a + b.',
+    example: '−7 + 3 = −4;  (−3)·(−5) = 15;  5 − (−2) = 7' },
+  { id: 'frac', short: 'Дроби', title: 'Действия с дробями', level: 1, prereq: ['arith'],
+    rule: 'Складывать дроби можно только с общим знаменателем. Делить на дробь — значит умножать на перевёрнутую вторую дробь.',
+    example: '1/2 + 1/3 = 3/6 + 2/6 = 5/6;  2/3 : 4/5 = 2/3 · 5/4 = 5/6' },
+  { id: 'pow', short: 'Степени', title: 'Степени', level: 1, prereq: ['arith', 'neg'],
+    rule: 'aⁿ — это a, умноженное само на себя n раз. При умножении степеней с одинаковым основанием показатели складываются.',
+    example: '2³ = 2·2·2 = 8;  (−3)² = 9;  a²·a³ = a⁵' },
+  { id: 'pct', short: 'Проценты', title: 'Проценты', level: 2, prereq: ['frac'],
+    rule: '1% — это сотая часть числа. p% от A = A · p / 100. Процент всегда считается от конкретной базы — определите её.',
+    example: '20% от 150 = 150 · 0,2 = 30;  45 от 60 = 45/60 = 75%' },
+  { id: 'prop', short: 'Пропорции', title: 'Пропорции', level: 2, prereq: ['frac'],
+    rule: 'В пропорции a/b = c/d произведение крайних равно произведению средних. Сначала решите: зависимость прямая или обратная?',
+    example: 'x/4 = 6/8 → 8x = 24 → x = 3' },
+  { id: 'expr', short: 'Выражения', title: 'Раскрытие скобок и подобные', level: 2, prereq: ['arith', 'neg'],
+    rule: 'Минус перед скобкой меняет знак каждого слагаемого в скобке. Множитель умножается на каждое слагаемое. Складывать можно только подобные слагаемые.',
+    example: '−(x − 3) = −x + 3;  3(x + 4) = 3x + 12;  5a + 2b − 3a = 2a + 2b' },
+  { id: 'root', short: 'Корни', title: 'Квадратный корень', level: 2, prereq: ['pow'],
+    rule: '√a — это неотрицательное число, квадрат которого равен a. Корень из суммы не равен сумме корней.',
+    example: '√49 = 7;  √(9+16) = √25 = 5;  √50 = √(25·2) = 5√2' },
+  { id: 'lin', short: 'Лин. уравнения', title: 'Линейные уравнения', level: 3, prereq: ['expr', 'frac'],
+    rule: 'Переносим слагаемые через «=» со сменой знака, затем делим обе части на коэффициент при x.',
+    example: '2x + 5 = 13 → 2x = 8 → x = 4' },
+  { id: 'fsu', short: 'ФСУ', title: 'Формулы сокращённого умножения', level: 3, prereq: ['expr', 'pow'],
+    rule: '(a ± b)² = a² ± 2ab + b²;  a² − b² = (a − b)(a + b). Удвоенное произведение не исчезает!',
+    example: '(x − 3)² = x² − 6x + 9;  51² − 49² = 2 · 100 = 200' },
+  { id: 'word', short: 'Текст. задачи', title: 'Текстовые задачи', level: 4, prereq: ['pct', 'prop', 'lin'],
+    rule: 'Обозначьте неизвестное, составьте уравнение по условию и перечитайте вопрос: найдите именно то, что спрашивают.',
+    example: 'Сумма 30, одно на 6 больше: x + (x + 6) = 30 → x = 12' },
+  { id: 'ineq', short: 'Неравенства', title: 'Линейные неравенства', level: 4, prereq: ['lin', 'neg'],
+    rule: 'Решаются как уравнения, но при умножении или делении на отрицательное число знак неравенства меняется на противоположный.',
+    example: '−2x > 6 → x < −3' },
+  { id: 'sys', short: 'Системы', title: 'Системы уравнений', level: 4, prereq: ['lin'],
+    rule: 'Выразите одну переменную и подставьте во второе уравнение, либо сложите уравнения. Ответ системы — пара (x; y).',
+    example: 'x + y = 10, x − y = 2 → 2x = 12 → x = 6, y = 4' },
+  { id: 'linf', short: 'Лин. функция', title: 'Линейная функция', level: 4, prereq: ['lin'],
+    rule: 'В y = kx + b число k — угловой коэффициент (k > 0 — возрастает), b — точка пересечения с осью Oy: (0; b).',
+    example: 'y = 2x − 3: k = 2, пересекает Oy в (0; −3)' },
+  { id: 'fact', short: 'Разложение', title: 'Разложение на множители', level: 4, prereq: ['fsu'],
+    rule: 'Выносим общий множитель, применяем ФСУ, для x² + px + q ищем числа с суммой p и произведением q.',
+    example: 'x² − 16 = (x − 4)(x + 4);  x² + 5x + 6 = (x + 2)(x + 3)' },
+  { id: 'quad', short: 'Кв. уравнения', title: 'Квадратные уравнения', level: 5, prereq: ['fact', 'root', 'lin'],
+    rule: 'D = b² − 4ac; x = (−b ± √D) / 2a. У квадратного уравнения может быть два корня — не теряйте второй.',
+    example: 'x² − 5x + 6 = 0 → D = 1 → x = 2 или x = 3' },
+  { id: 'parab', short: 'Парабола', title: 'Квадратичная функция', level: 6, prereq: ['quad', 'linf'],
+    rule: 'y = a(x − m)² + n: вершина (m; n), при a > 0 ветви вверх, при a < 0 — вниз. Нули функции — корни уравнения y = 0.',
+    example: 'y = (x − 2)² + 1: вершина (2; 1), ветви вверх' }
+];
+
+Tamyr.MISCONCEPTIONS = {
+  left_to_right:     { home: 'arith', title: 'Считает строго слева направо, игнорируя приоритет операций', fix: 'Умножение и деление выполняются раньше сложения и вычитания.' },
+  mult_before_div:   { home: 'arith', title: 'Считает, что умножение всегда раньше деления', fix: 'Умножение и деление равноправны — выполняются по порядку слева направо.' },
+  neg_add_sign:      { home: 'neg',   title: 'Складывает модули, сохраняя знак минус', fix: 'У чисел с разными знаками модули вычитаются: −7 + 3 = −(7 − 3).' },
+  neg_mult_sign:     { home: 'neg',   title: 'Не применяет правило «минус на минус даёт плюс»', fix: 'Произведение двух отрицательных чисел положительно.' },
+  double_neg:        { home: 'neg',   title: 'Путает вычитание отрицательного числа с вычитанием', fix: 'a − (−b) = a + b.' },
+  frac_add_across:   { home: 'frac',  title: 'Складывает числители с числителями, знаменатели со знаменателями', fix: 'Сначала приведите дроби к общему знаменателю.' },
+  frac_add_numerators:{ home: 'frac', title: 'Складывает числители, не приводя к общему знаменателю', fix: 'Числители складываются только при одинаковых знаменателях.' },
+  frac_div_mult:     { home: 'frac',  title: 'Делит дроби «поперёк», как при умножении', fix: 'Деление на дробь = умножение на обратную дробь.' },
+  frac_flip_wrong:   { home: 'frac',  title: 'Переворачивает не ту дробь при делении', fix: 'Переворачивается делитель — вторая дробь.' },
+  pow_as_mult:       { home: 'pow',   title: 'Путает возведение в степень с умножением на показатель', fix: '2³ = 2·2·2, а не 2·3.' },
+  neg_square:        { home: 'pow',   title: 'Считает, что квадрат отрицательного числа отрицателен', fix: '(−3)² = (−3)·(−3) = 9.' },
+  pow_mult_exp:      { home: 'pow',   title: 'Перемножает показатели при умножении степеней', fix: 'aᵐ·aⁿ = aᵐ⁺ⁿ — показатели складываются.' },
+  pct_divide_wrong:  { home: 'pct',   title: 'Делит число на количество процентов', fix: 'p% от A = A · p / 100.' },
+  pct_cancel:        { home: 'pct',   title: 'Считает, что +10% и −10% компенсируют друг друга', fix: 'Второй процент считается от новой базы.' },
+  pct_base_swap:     { home: 'pct',   title: 'Путает, от какой величины считается процент', fix: 'База — величина «до изменения» или та, о которой спрашивают «от чего».' },
+  prop_cross_wrong:  { home: 'prop',  title: 'Неверно перемножает члены пропорции', fix: 'Крайние на крайние, средние на средние: a·d = b·c.' },
+  prop_additive:     { home: 'prop',  title: 'Использует разность вместо отношения («на сколько» вместо «во сколько»)', fix: 'В пропорциональной зависимости величины изменяются в одинаковое число раз.' },
+  prop_inverse:      { home: 'prop',  title: 'Не отличает прямую пропорциональность от обратной', fix: 'Больше рабочих — меньше дней: это обратная зависимость.' },
+  brackets_sign:     { home: 'expr',  title: 'Меняет знак только у первого слагаемого при раскрытии скобок', fix: 'Минус перед скобкой меняет знак каждого слагаемого.' },
+  distribute_partial:{ home: 'expr',  title: 'Умножает множитель только на первое слагаемое в скобке', fix: 'a(b + c) = ab + ac.' },
+  combine_unlike:    { home: 'expr',  title: 'Складывает неподобные слагаемые', fix: 'a и b — разные «предметы», их нельзя складывать в одно.' },
+  root_as_half:      { home: 'root',  title: 'Считает, что корень — это деление на 2', fix: '√49 — число, квадрат которого 49, то есть 7.' },
+  root_of_sum:       { home: 'root',  title: 'Считает, что корень из суммы равен сумме корней', fix: '√(a + b) ≠ √a + √b. Сначала посчитайте сумму.' },
+  root_extract:      { home: 'root',  title: 'Неверно выносит множитель из-под корня', fix: '√(25·2) = √25 · √2 = 5√2.' },
+  eq_move_sign:      { home: 'lin',   title: 'Переносит слагаемые без смены знака', fix: 'При переносе через «=» знак слагаемого меняется.' },
+  eq_div_order:      { home: 'lin',   title: 'Нарушает порядок обратных действий при решении уравнения', fix: 'Сначала уберите слагаемые, потом делите/умножайте.' },
+  sq_sum_distribute: { home: 'fsu',   title: 'Считает, что (a + b)² = a² + b²', fix: 'Не забывайте удвоенное произведение 2ab.' },
+  sq_sign_last:      { home: 'fsu',   title: 'Ошибается в знаке последнего слагаемого квадрата разности', fix: '(a − b)² = a² − 2ab + b² — квадрат всегда с плюсом.' },
+  diff_sq_wrong:     { home: 'fsu',   title: 'Путает разность квадратов с квадратом разности', fix: 'a² − b² = (a − b)(a + b), а не (a − b)².' },
+  factor_incomplete: { home: 'fact',  title: 'Выносит общий множитель, не деля на него все слагаемые', fix: 'Каждое слагаемое в скобке делится на вынесенный множитель.' },
+  vieta_check:       { home: 'fact',  title: 'Подбирает числа только по произведению, не проверяя сумму', fix: 'Числа должны давать и нужное произведение, и нужную сумму.' },
+  vieta_sign:        { home: 'fact',  title: 'Ошибается в знаках корней по теореме Виета', fix: 'x₁ + x₂ = −p: при −5x сумма корней равна +5.' },
+  answer_wrong_qty:  { home: 'word',  title: 'Находит не ту величину, о которой спрашивают', fix: 'Перечитайте вопрос перед записью ответа.' },
+  ineq_flip:         { home: 'ineq',  title: 'Не меняет знак неравенства при делении на отрицательное число', fix: 'Делим на отрицательное — разворачиваем знак.' },
+  ineq_integer:      { home: 'ineq',  title: 'Игнорирует условие «целое решение»', fix: 'Проверьте, что ответ удовлетворяет всем условиям задачи.' },
+  sys_order_swap:    { home: 'sys',   title: 'Путает порядок x и y в ответе системы', fix: 'Пара записывается как (x; y).' },
+  axis_swap:         { home: 'linf',  title: 'Путает координаты точки пересечения с осями', fix: 'На оси Oy x = 0, поэтому точка (0; b).' },
+  slope_intercept:   { home: 'linf',  title: 'Путает угловой коэффициент со свободным членом', fix: 'k — число при x; от него зависит рост функции.' },
+  quad_lose_root:    { home: 'quad',  title: 'Теряет второй (отрицательный) корень', fix: 'x² = 9 имеет два корня: 3 и −3.' },
+  disc_sign:         { home: 'quad',  title: 'Ошибается в знаке при вычислении дискриминанта', fix: 'D = b² − 4ac: вычитается 4ac.' },
+  quad_divide_x:     { home: 'quad',  title: 'Делит уравнение на x и теряет корень x = 0', fix: 'Выносите x за скобку: x(x − 4) = 0.' },
+  vertex_sign:       { home: 'parab', title: 'Ошибается в знаке абсциссы вершины', fix: 'В y = (x − m)² + n вершина имеет x = m (со знаком, противоположным в скобке).' },
+  branches_sign:     { home: 'parab', title: 'Не связывает знак a с направлением ветвей', fix: 'a < 0 — ветви вниз.' }
+};
+
+/* Варианты: ok — правильный; mis — какую ошибку выдаёт выбор. */
+Tamyr.QUESTIONS = [
+  // arith
+  { id: 'arith1', topic: 'arith', text: '8 + 2 · 5 = ?', options: [{ t: '18', ok: true }, { t: '50', mis: 'left_to_right' }, { t: '20' }, { t: '15' }] },
+  { id: 'arith2', topic: 'arith', text: '24 : 4 · 2 = ?', options: [{ t: '12', ok: true }, { t: '3', mis: 'mult_before_div' }, { t: '6' }, { t: '48' }] },
+  { id: 'arith3', topic: 'arith', text: '20 − (6 − 2) · 3 = ?', options: [{ t: '8', ok: true }, { t: '48', mis: 'left_to_right' }, { t: '2' }, { t: '32' }] },
+  // neg
+  { id: 'neg1', topic: 'neg', text: '−7 + 3 = ?', options: [{ t: '−4', ok: true }, { t: '−10', mis: 'neg_add_sign' }, { t: '4' }, { t: '10' }] },
+  { id: 'neg2', topic: 'neg', text: '(−3) · (−5) = ?', options: [{ t: '15', ok: true }, { t: '−15', mis: 'neg_mult_sign' }, { t: '−8' }, { t: '8' }] },
+  { id: 'neg3', topic: 'neg', text: '5 − (−2) = ?', options: [{ t: '7', ok: true }, { t: '3', mis: 'double_neg' }, { t: '−7' }, { t: '−3' }] },
+  // frac
+  { id: 'frac1', topic: 'frac', text: '1/2 + 1/3 = ?', options: [{ t: '5/6', ok: true }, { t: '2/5', mis: 'frac_add_across' }, { t: '1/6' }, { t: '2/6', mis: 'frac_add_numerators' }] },
+  { id: 'frac2', topic: 'frac', text: '2/3 : 4/5 = ?', options: [{ t: '5/6', ok: true }, { t: '8/15', mis: 'frac_div_mult' }, { t: '6/5', mis: 'frac_flip_wrong' }, { t: '1/2' }] },
+  { id: 'frac3', topic: 'frac', text: '3/4 + 1/8 = ?', options: [{ t: '7/8', ok: true }, { t: '4/12', mis: 'frac_add_across' }, { t: '4/8', mis: 'frac_add_numerators' }, { t: '3/32' }] },
+  // pow
+  { id: 'pow1', topic: 'pow', text: '2³ = ?', options: [{ t: '8', ok: true }, { t: '6', mis: 'pow_as_mult' }, { t: '9' }, { t: '5' }] },
+  { id: 'pow2', topic: 'pow', text: '(−3)² = ?', options: [{ t: '9', ok: true }, { t: '−9', mis: 'neg_square' }, { t: '6' }, { t: '−6', mis: 'pow_as_mult' }] },
+  { id: 'pow3', topic: 'pow', text: 'a² · a³ = ?', options: [{ t: 'a⁵', ok: true }, { t: 'a⁶', mis: 'pow_mult_exp' }, { t: '2a⁵' }, { t: 'a' }] },
+  // pct
+  { id: 'pct1', topic: 'pct', text: 'Сколько составляет 20% от 150?', options: [{ t: '30', ok: true }, { t: '7,5', mis: 'pct_divide_wrong' }, { t: '3000' }, { t: '130' }] },
+  { id: 'pct2', topic: 'pct', text: 'Цену 200 ₸ повысили на 10%, затем снизили на 10%. Какой стала цена?', options: [{ t: '198 ₸', ok: true }, { t: '200 ₸', mis: 'pct_cancel' }, { t: '180 ₸' }, { t: '202 ₸' }] },
+  { id: 'pct3', topic: 'pct', text: 'Сколько процентов составляет 45 от 60?', options: [{ t: '75%', ok: true }, { t: '≈133%', mis: 'pct_base_swap' }, { t: '45%' }, { t: '15%' }] },
+  // prop
+  { id: 'prop1', topic: 'prop', text: 'x/4 = 6/8. Найдите x.', options: [{ t: '3', ok: true }, { t: '12', mis: 'prop_cross_wrong' }, { t: '2' }, { t: '48', mis: 'prop_cross_wrong' }] },
+  { id: 'prop2', topic: 'prop', text: '5 тетрадей стоят 400 ₸. Сколько стоят 8 таких тетрадей?', options: [{ t: '640 ₸', ok: true }, { t: '403 ₸', mis: 'prop_additive' }, { t: '500 ₸' }, { t: '320 ₸' }] },
+  { id: 'prop3', topic: 'prop', text: '3 рабочих выполняют работу за 12 дней. За сколько дней её выполнят 6 рабочих?', options: [{ t: '6', ok: true }, { t: '24', mis: 'prop_inverse' }, { t: '9', mis: 'prop_additive' }, { t: '3' }] },
+  // expr
+  { id: 'expr1', topic: 'expr', text: 'Раскройте скобки: −(x − 3)', options: [{ t: '−x + 3', ok: true }, { t: '−x − 3', mis: 'brackets_sign' }, { t: 'x + 3' }, { t: 'x − 3' }] },
+  { id: 'expr2', topic: 'expr', text: 'Раскройте скобки: 3(x + 4)', options: [{ t: '3x + 12', ok: true }, { t: '3x + 4', mis: 'distribute_partial' }, { t: 'x + 12' }, { t: '7x' }] },
+  { id: 'expr3', topic: 'expr', text: 'Упростите: 5a + 2b − 3a', options: [{ t: '2a + 2b', ok: true }, { t: '4ab', mis: 'combine_unlike' }, { t: '2a − 2b' }, { t: '8a + 2b' }] },
+  // root
+  { id: 'root1', topic: 'root', text: '√49 = ?', options: [{ t: '7', ok: true }, { t: '24,5', mis: 'root_as_half' }, { t: '14' }, { t: '2401' }] },
+  { id: 'root2', topic: 'root', text: '√(9 + 16) = ?', options: [{ t: '5', ok: true }, { t: '7', mis: 'root_of_sum' }, { t: '25' }, { t: '12,5', mis: 'root_as_half' }] },
+  { id: 'root3', topic: 'root', text: 'Упростите: √50', options: [{ t: '5√2', ok: true }, { t: '25√2', mis: 'root_extract' }, { t: '10√5' }, { t: '2√5' }] },
+  // lin
+  { id: 'lin1', topic: 'lin', text: '2x + 5 = 13. Найдите x.', options: [{ t: '4', ok: true }, { t: '9', mis: 'eq_move_sign' }, { t: '6,5', mis: 'eq_div_order' }, { t: '16' }] },
+  { id: 'lin2', topic: 'lin', text: '3x = 12 − x. Найдите x.', options: [{ t: '3', ok: true }, { t: '6', mis: 'eq_move_sign' }, { t: '4' }, { t: '12' }] },
+  { id: 'lin3', topic: 'lin', text: 'x/3 − 1 = 2. Найдите x.', options: [{ t: '9', ok: true }, { t: '1', mis: 'eq_div_order' }, { t: '3', mis: 'eq_move_sign' }, { t: '5' }] },
+  // fsu
+  { id: 'fsu1', topic: 'fsu', text: '(a + b)² = ?', options: [{ t: 'a² + 2ab + b²', ok: true }, { t: 'a² + b²', mis: 'sq_sum_distribute' }, { t: 'a² + ab + b²' }, { t: '2a + 2b', mis: 'pow_as_mult' }] },
+  { id: 'fsu2', topic: 'fsu', text: '(x − 3)² = ?', options: [{ t: 'x² − 6x + 9', ok: true }, { t: 'x² − 9', mis: 'sq_sum_distribute' }, { t: 'x² − 6x − 9', mis: 'sq_sign_last' }, { t: 'x² + 9' }] },
+  { id: 'fsu3', topic: 'fsu', text: 'Вычислите удобным способом: 51² − 49²', options: [{ t: '200', ok: true }, { t: '4', mis: 'diff_sq_wrong' }, { t: '100' }, { t: '2' }] },
+  // word
+  { id: 'word1', topic: 'word', text: 'Товар стоил 5000 ₸, после скидки — 4000 ₸. Какова скидка в процентах?', options: [{ t: '20%', ok: true }, { t: '25%', mis: 'pct_base_swap' }, { t: '10%' }, { t: '80%', mis: 'answer_wrong_qty' }] },
+  { id: 'word2', topic: 'word', text: 'Сумма двух чисел равна 30, одно из них на 6 больше другого. Найдите меньшее число.', options: [{ t: '12', ok: true }, { t: '18', mis: 'answer_wrong_qty' }, { t: '24' }, { t: '15' }] },
+  { id: 'word3', topic: 'word', text: 'Велосипедист проехал 36 км за 3 ч. Сколько он проедет за 5 ч с той же скоростью?', options: [{ t: '60 км', ok: true }, { t: '38 км', mis: 'prop_additive' }, { t: '108 км' }, { t: '45 км' }] },
+  // ineq
+  { id: 'ineq1', topic: 'ineq', text: 'Решите неравенство: −2x > 6', options: [{ t: 'x < −3', ok: true }, { t: 'x > −3', mis: 'ineq_flip' }, { t: 'x > 3' }, { t: 'x < 3', mis: 'neg_mult_sign' }] },
+  { id: 'ineq2', topic: 'ineq', text: 'Решите неравенство: 3x − 1 ≤ 8', options: [{ t: 'x ≤ 3', ok: true }, { t: 'x ≥ 3', mis: 'ineq_flip' }, { t: 'x ≤ 7/3', mis: 'eq_move_sign' }, { t: 'x ≤ 9' }] },
+  { id: 'ineq3', topic: 'ineq', text: 'Найдите наименьшее целое решение неравенства 2x > 5', options: [{ t: '3', ok: true }, { t: '2,5', mis: 'ineq_integer' }, { t: '2' }, { t: '5' }] },
+  // sys
+  { id: 'sys1', topic: 'sys', text: 'x + y = 10, x − y = 2. Найдите x.', options: [{ t: '6', ok: true }, { t: '4', mis: 'answer_wrong_qty' }, { t: '5' }, { t: '8' }] },
+  { id: 'sys2', topic: 'sys', text: 'y = 2x, x + y = 9. Решение системы (x; y):', options: [{ t: '(3; 6)', ok: true }, { t: '(6; 3)', mis: 'sys_order_swap' }, { t: '(4,5; 4,5)' }, { t: '(2; 7)' }] },
+  { id: 'sys3', topic: 'sys', text: '2x + y = 7, x + y = 4. Найдите x.', options: [{ t: '3', ok: true }, { t: '1', mis: 'answer_wrong_qty' }, { t: '11/3' }, { t: '−3' }] },
+  // linf
+  { id: 'linf1', topic: 'linf', text: 'В какой точке график y = 2x − 3 пересекает ось Oy?', options: [{ t: '(0; −3)', ok: true }, { t: '(−3; 0)', mis: 'axis_swap' }, { t: '(0; 2)', mis: 'slope_intercept' }, { t: '(1,5; 0)' }] },
+  { id: 'linf2', topic: 'linf', text: 'Чему равен угловой коэффициент функции y = −4x + 1?', options: [{ t: '−4', ok: true }, { t: '1', mis: 'slope_intercept' }, { t: '4' }, { t: '−1/4' }] },
+  { id: 'linf3', topic: 'linf', text: 'Какая из функций возрастает?', options: [{ t: 'y = 3x − 5', ok: true }, { t: 'y = −2x + 7', mis: 'slope_intercept' }, { t: 'y = 5 − x' }, { t: 'y = −x' }] },
+  // fact
+  { id: 'fact1', topic: 'fact', text: 'Разложите на множители: x² − 16', options: [{ t: '(x − 4)(x + 4)', ok: true }, { t: '(x − 4)²', mis: 'diff_sq_wrong' }, { t: '(x − 8)(x + 8)', mis: 'root_as_half' }, { t: '(x − 2)(x + 8)' }] },
+  { id: 'fact2', topic: 'fact', text: 'Вынесите общий множитель: x² + 5x', options: [{ t: 'x(x + 5)', ok: true }, { t: 'x(x + 5x)', mis: 'factor_incomplete' }, { t: '5x(x + 1)' }, { t: '6x²', mis: 'combine_unlike' }] },
+  { id: 'fact3', topic: 'fact', text: 'Разложите на множители: x² + 5x + 6', options: [{ t: '(x + 2)(x + 3)', ok: true }, { t: '(x + 1)(x + 6)', mis: 'vieta_check' }, { t: '(x − 2)(x − 3)', mis: 'vieta_sign' }, { t: '(x + 5)(x + 1)' }] },
+  // quad
+  { id: 'quad1', topic: 'quad', text: 'Решите уравнение: x² = 9', options: [{ t: 'x = ±3', ok: true }, { t: 'x = 3', mis: 'quad_lose_root' }, { t: 'x = 4,5', mis: 'root_as_half' }, { t: 'x = 81' }] },
+  { id: 'quad2', topic: 'quad', text: 'Найдите корни: x² − 5x + 6 = 0', options: [{ t: '2 и 3', ok: true }, { t: '−2 и −3', mis: 'vieta_sign' }, { t: '1 и 6', mis: 'vieta_check' }, { t: '5 и 6' }] },
+  { id: 'quad3', topic: 'quad', text: 'Найдите дискриминант уравнения x² + 4x + 5 = 0', options: [{ t: '−4', ok: true }, { t: '36', mis: 'disc_sign' }, { t: '4' }, { t: '11' }] },
+  { id: 'quad4', topic: 'quad', text: 'Решите уравнение: x² − 4x = 0', options: [{ t: '0 и 4', ok: true }, { t: 'только 4', mis: 'quad_divide_x' }, { t: '±2' }, { t: '−4' }] },
+  // parab
+  { id: 'parab1', topic: 'parab', text: 'Координаты вершины параболы y = (x − 2)² + 1:', options: [{ t: '(2; 1)', ok: true }, { t: '(−2; 1)', mis: 'vertex_sign' }, { t: '(2; −1)' }, { t: '(1; 2)', mis: 'sys_order_swap' }] },
+  { id: 'parab2', topic: 'parab', text: 'Куда направлены ветви параболы y = −x² + 3x?', options: [{ t: 'Вниз', ok: true }, { t: 'Вверх', mis: 'branches_sign' }, { t: 'Вправо' }, { t: 'Зависит от x' }] },
+  { id: 'parab3', topic: 'parab', text: 'Найдите нули функции y = x² − 1', options: [{ t: 'x = ±1', ok: true }, { t: 'x = 1', mis: 'quad_lose_root' }, { t: 'x = −1' }, { t: 'Нулей нет' }] }
+];
+
+/* Цели диагностики: с каких тем начинается проверка. */
+Tamyr.GOALS = [
+  { id: 'full', title: 'Вся алгебра ЕНТ', desc: 'Квадратичная функция, текстовые задачи, неравенства, системы', start: ['parab', 'word', 'ineq', 'sys'] },
+  { id: 'quad', title: 'Квадратные уравнения', desc: 'Проверим тему и всё, на чём она держится', start: ['quad'] },
+  { id: 'word', title: 'Текстовые задачи', desc: 'Проценты, пропорции, составление уравнений', start: ['word'] },
+  { id: 'linf', title: 'Функции и графики', desc: 'Линейная и квадратичная функции', start: ['parab', 'linf'] }
+];

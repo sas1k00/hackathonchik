@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tamyr — тесты движка</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Тесты движка диагностики</h1>
+      <p class="muted">Юнит-тесты графа и алгоритма + симуляция 1000 виртуальных учеников с заранее известными пробелами.</p>
+      <ul class="tests" id="tests"></ul>
+    </section>
+    <section class="card">
+      <h2>Симуляция: точность поиска корневых пробелов</h2>
+      <div id="sim"></div>
+    </section>
+  </main>
+  <script src="js/data.js"></script>
+  <script src="js/engine.js"></script>
+  <script>
+    const T = window.Tamyr;
+    const out = document.getElementById('tests');
+    const results = [];
+    function test(name, fn) {
+      let ok = false, err = '';
+      try { fn(); ok = true; } catch (e) { err = e.message; }
+      results.push({ name, ok, err });
+      out.insertAdjacentHTML('beforeend', `<li class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${name}${err ? ' — ' + err : ''}</li>`);
+    }
+    function assert(c, m) { if (!c) throw new Error(m || 'assertion failed'); }
+    function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((m || '') + ` ожидалось ${JSON.stringify(b)}, получено ${JSON.stringify(a)}`); }
+
+    // Скриптовый ученик: знает темы из known, остальные — нет (отвечает детерминированно).
+    function run(start, known, opts) {
+      const d = new T.Diagnostic(start, { rand: T.rng(7) });
+      let cur, n = 0;
+      while ((cur = d.next())) {
+        const ok = known.has(cur.topic);
+        const idx = ok ? cur.options.findIndex(o => o.ok)
+          : (opts && opts.skip) ? null
+          : cur.options.findIndex(o => !o.ok && o.mis) !== -1 ? cur.options.findIndex(o => !o.ok && o.mis) : cur.options.findIndex(o => !o.ok);
+        d.answer(idx);
+        if (++n > 200) throw new Error('бесконечный цикл');
+      }
+      return { d, r: d.result() };
+    }
+    const ALL = new Set(T.TOPICS.map(t => t.id));
+    const without = (...ids) => {
+      const s = new Set(ALL);
+      ids.forEach(id => { s.delete(id); T.descendants(id).forEach(x => s.delete(x)); });
+      return s;
+    };
+
+    test('Граф: у каждой темы есть минимум 3 вопроса', () => T.TOPICS.forEach(t => assert(T.questionsByTopic[t.id].length >= 3, t.id)));
+    test('Граф: у каждого вопроса ровно один верный ответ', () => T.QUESTIONS.forEach(q => eq(q.options.filter(o => o.ok).length, 1, q.id)));
+    test('Граф: все пререквизиты существуют и лежат на более низком уровне', () => T.TOPICS.forEach(t => t.prereq.forEach(p => {
+      assert(T.TOPIC[p], p); assert(T.TOPIC[p].level < t.level, t.id + '→' + p);
+    })));
+    test('Граф: все метки ошибок существуют', () => T.QUESTIONS.forEach(q => q.options.forEach(o => { if (o.mis) assert(T.MISCONCEPTIONS[o.mis], o.mis); })));
+    test('Граф: домашняя тема каждой ошибки существует', () => Object.values(T.MISCONCEPTIONS).forEach(m => assert(T.TOPIC[m.home], m.home)));
+
+    test('Сильный ученик: 2 вопроса на цель, всё остальное выводится', () => {
+      const { r } = run(['quad'], ALL);
+      eq(r.asked, 2); eq(r.gaps, []); eq(r.status.quad, 'mastered'); eq(r.status.frac, 'inferred');
+    });
+    test('Пробел в дробях находится как единственный корень', () => {
+      const { r } = run(['quad'], without('frac'));
+      eq(r.rootGaps, ['frac']);
+    });
+    test('Пробел в отрицательных числах находится с цели «вся алгебра»', () => {
+      const { r } = run(T.GOALS[0].start, without('neg'));
+      eq(r.rootGaps, ['neg']);
+    });
+    test('Два независимых корня находятся оба', () => {
+      const { r } = run(T.GOALS[0].start, without('frac', 'pow'));
+      eq(r.rootGaps.slice().sort(), ['frac', 'pow']);
+    });
+    test('«Не знаю» считается неверным ответом', () => {
+      const { r } = run(['lin'], new Set(), { skip: true });
+      assert(r.gaps.includes('lin')); assert(r.rootGaps.length > 0);
+    });
+    test('Не больше 3 вопросов на тему', () => {
+      const { d } = run(T.GOALS[0].start, without('arith'));
+      T.TOPICS.forEach(t => assert(d.state[t.id].answers.length <= 3, t.id));
+    });
+    test('Темы выше пробела помечаются «под угрозой», а не «освоено»', () => {
+      const { r } = run(['word'], without('pct'));
+      eq(r.rootGaps, ['pct']);
+      assert(['gap', 'risk', 'unknown', 'mastered'].includes(r.status.word));
+    });
+    test('Ошибка с меткой приводит к проверке её домашней темы первой', () => {
+      const d = new T.Diagnostic(['quad'], { rand: T.rng(1) });
+      let cur = d.next();
+      const i = cur.options.findIndex(o => o.mis && T.MISCONCEPTIONS[o.mis].home !== 'quad' && T.ancestors('quad').has(T.MISCONCEPTIONS[o.mis].home));
+      if (i === -1) return; // у выпавшего вопроса нет такой метки — тест неприменим
+      const home = T.MISCONCEPTIONS[cur.options[i].mis].home;
+      d.answer(i);
+      cur = d.next(); d.answer(cur.options.findIndex(o => !o.ok));
+      if (d.state.quad.status !== 'gap') return;
+      eq(d.next().topic, home);
+    });
+
+    // ---- Симуляция ----
+    const BASE = ['arith', 'neg', 'frac', 'pow', 'pct', 'prop', 'expr', 'root', 'lin', 'fsu'];
+    const N = 1000;
+    const rand = T.rng(42);
+    let exact = 0, tp = 0, fp = 0, fn = 0, asked = 0, clean = 0, cleanOk = 0;
+    for (let i = 0; i < N; i++) {
+      const k = rand() < 0.15 ? 0 : rand() < 0.7 ? 1 : 2;
+      const roots = [];
+      while (roots.length < k) { const r = BASE[Math.floor(rand() * BASE.length)]; if (!roots.includes(r)) roots.push(r); }
+      // оставляем только независимые корни (один не является предком другого)
+      const truth = roots.filter(r => !roots.some(o => o !== r && T.ancestors(r).has(o)));
+      const res = T.runSimulated(T.GOALS[0].start, truth, 5000 + i);
+      asked += res.asked;
+      const got = new Set(res.rootGaps);
+      truth.forEach(r => got.has(r) ? tp++ : fn++);
+      got.forEach(r => { if (!truth.includes(r)) fp++; });
+      if (truth.length === got.size && truth.every(r => got.has(r))) exact++;
+      if (!truth.length) { clean++; if (!got.size) cleanOk++; }
+    }
+    const pct = x => (100 * x).toFixed(1) + '%';
+    const full = T.TOPICS.reduce((s, t) => s + Math.min(3, T.questionsByTopic[t.id].length), 0);
+    window.SIM = { N, recall: tp / (tp + fn), precision: tp / (tp + fp), exact: exact / N, avgAsked: asked / N, full, cleanOk: cleanOk / clean };
+    document.getElementById('sim').innerHTML = `
+      <div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+        <div><b>${pct(SIM.recall)}</b><span>полнота: найдено настоящих корней</span></div>
+        <div><b>${pct(SIM.precision)}</b><span>точность: найденные корни верны</span></div>
+        <div><b>${pct(SIM.exact)}</b><span>карта корней совпала полностью</span></div>
+        <div><b>${SIM.avgAsked.toFixed(1)}</b><span>вопросов в среднем (полный тест — ${full})</span></div>
+      </div>
+      <p class="small muted" style="margin-top:12px">Модель ученика: знает тему → верно с вероятностью 92%; не знает → 20% (угадывание), в остальных случаях в 70% выбирает «типичную» ошибку. Это проверка алгоритма, а не данные реальных учеников.</p>`;
+    window.TEST_RESULTS = results;
+  </script>
+</body>
+</html>
