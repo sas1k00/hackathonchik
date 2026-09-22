@@ -30,7 +30,8 @@ RED = RGBColor(0xE0, 0x47, 0x3E)
 RED_PALE = RGBColor(0xFB, 0xE3, 0xE1)
 
 DISPLAY = 'Arial Black'
-BODY = 'Calibri'
+BODY = 'Arial Black'
+BODY_SCALE = 0.88  # Arial Black шире Calibri — обычный текст чуть мельче, чтобы не вылезал
 FOOTER = 'VentureHack 2026  ·  Трек 2 — EduTech'
 
 prs = Presentation()
@@ -100,8 +101,9 @@ def text(slide, x, y, w, h, runs, size=16, color=INK, font=BODY, bold=False, ali
             r = para.add_run()
             r.text = t
             r.font.name = o.get('font', font)
-            r.font.size = Pt(o.get('size', size))
-            r.font.bold = o.get('bold', bold)
+            sz = o.get('size', size)
+            r.font.size = Pt(sz if sz >= 22 else round(sz * BODY_SCALE))
+            r.font.bold = False
             r.font.italic = o.get('italic', italic)
             r.font.color.rgb = o.get('color', color)
     return tb
@@ -146,8 +148,8 @@ def label(s, t, size=14, color=WHITE, bold=True, font=BODY, align=PP_ALIGN.CENTE
         r = p.add_run()
         r.text = ln
         r.font.name = font
-        r.font.size = Pt(size)
-        r.font.bold = bold
+        r.font.size = Pt(size if size >= 22 else round(size * BODY_SCALE))
+        r.font.bold = False
         r.font.color.rgb = color
 
 
@@ -258,7 +260,7 @@ shape(s, MSO_SHAPE.OVAL, cx - 2.45, cy + 1.95, 4.9, 0.75, BLUE_DARK)
 shape(s, MSO_SHAPE.OVAL, cx - 2.3, cy + 1.88, 4.6, 0.6, RGBColor(0x1A, 0x1F, 0x2A), BLUE_MID, 2.5)
 for (i, j), t, f, fc in cells:
     h = hexagon(s, cx + i * 0.75 * HW - HW / 2, cy + j * HH - HH / 2, HW, f, WHITE, 3)
-    label(h, t, size=12 if len(t) > 9 else 14, color=fc)
+    label(h, t, size=11 if len(t) > 9 else 14, color=fc)
 tag = shape(s, MSO_SHAPE.ROUNDED_RECTANGLE, cx - 0.62, cy + 0.26, 1.24, 0.3, WHITE)
 tag.adjustments[0] = 0.5
 label(tag, 'КОРЕНЬ', size=10, color=RED)
@@ -362,7 +364,7 @@ for a, b in [('quad', 'fact'), ('quad', 'lin'), ('quad', 'root'), ('lin', 'expr'
     line(s, nodes[a][0] + NW_ / 2, nodes[a][1] + NH_, nodes[b][0] + NW_ / 2, nodes[b][1], RED if bad else LINE, 2.5 if bad else 1.5, arrow=True)
 for k, (x, y, t, f, l, fc) in nodes.items():
     h = hexagon(s, x, y, NW_, f, l, 2, h=NH_)
-    label(h, t, size=12, color=fc)
+    label(h, t, size=11, color=fc)
 text(s, 0.6, 6.95, 6.0, 0.3, 'Синий — освоено, красный — пробел, насыщенный красный — корень', size=11, color=MUTED, italic=True)
 rules = [('Решил тему без ошибок', 'всё, на чём она держится, засчитано без вопросов', BLUE),
          ('Ошибся дважды', 'спускаемся к непроверенным пререквизитам', RED),
@@ -417,7 +419,7 @@ for i, (h_, b) in enumerate(pts):
     hexagon(s, 0.7, y + 0.06, 0.3, BLUE)
     text(s, 1.15, y, 3.9, 0.4, h_, size=18, bold=True, color=BLUE)
     text(s, 1.15, y + 0.38, 3.9, 0.45, b, size=13, color=GRAY)
-text(s, 5.35, 6.95, 7.3, 0.3, 'Демо-класс: 24 виртуальных ученика, прогнанных через тот же движок (симуляция, не реальные данные).', size=11, color=GRAY, italic=True)
+text(s, 5.35, 6.95, 7.3, 0.3, 'Демо-класс: 24 виртуальных ученика (симуляция, не реальные данные).', size=11, color=GRAY, italic=True)
 
 # =====================================================================
 # 8. Конкуренты
