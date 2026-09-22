@@ -25,7 +25,7 @@
       <section class="hero">
         <p class="eyebrow">Трек EduTech · подготовка к ЕНТ по математике</p>
         <h1>Ошибка в квадратных уравнениях.<br>Причина — в дробях.</h1>
-        <p class="lead">Tamyr находит не просто тему, где ученик ошибается, а <b>корневой пробел</b>, из-за которого рушатся все следующие темы, — и задаёт примерно вдвое меньше вопросов, чем полный тест. Затем строит короткий план: от корня — наверх.</p>
+        <p class="lead">Tamyr находит не просто тему, где ученик ошибается, а <b>корневой пробел</b>, из-за которого рушатся все следующие темы. Вглубь он спускается только там, где ученик ошибается: без пробелов хватает около 9 вопросов. Затем строит короткий план — от корня наверх.</p>
         <div class="cta">
           <a class="btn primary" href="#setup">Пройти диагностику</a>
           <a class="btn" href="#teacher">Панель учителя</a>
@@ -135,7 +135,7 @@
   function viewResult() {
     const r = state.result;
     if (!r) { location.hash = '#home'; return; }
-    const saved = Math.max(0, r.fullTestSize - r.asked);
+    const inferred = T.TOPICS.filter(t => r.status[t.id] === S.INFERRED).length;
     const noGaps = !r.gaps.length;
     const risk = T.TOPICS.filter(t => r.status[t.id] === S.RISK).map(t => t.id);
     app.innerHTML = `
@@ -148,7 +148,7 @@
         </div>
         <div class="stats">
           <div><b>${r.asked}</b><span>вопросов задано</span></div>
-          <div><b>${saved}</b><span>вопросов сэкономлено*</span></div>
+          <div><b>${inferred}</b><span>тем засчитано без вопросов</span></div>
           <div><b>${r.gaps.length}</b><span>тем с пробелами</span></div>
         </div>
       </section>
@@ -157,7 +157,6 @@
           <h2>Карта</h2>
           <div id="result-graph"></div>
           ${legendHtml()}
-          <p class="tiny muted">* по сравнению с полным тестом по всем ${T.TOPICS.length} темам (${r.fullTestSize} вопросов).</p>
         </div>
         <div class="col">
           ${r.traces.length ? `<div class="card"><h2>Откуда растут ошибки</h2><ul class="traces">${r.traces.map(t => `<li><span class="bad">${esc(topicTitle(t.topic))}</span><span class="arrow">→ корень:</span><span class="root">${t.roots.map(x => esc(topicTitle(x))).join(', ')}</span></li>`).join('')}</ul></div>` : ''}
@@ -191,9 +190,7 @@
     if (!r || !T.TOPIC[topicId]) { location.hash = '#home'; return; }
     const t = T.TOPIC[topicId];
     if (!state.practice || state.practice.topic !== topicId) {
-      const used = new Set(state.diag ? state.diag.state[topicId].answers.map(a => a.qid) : []);
-      const pool = T.shuffle(T.questionsByTopic[topicId], Math.random);
-      const fresh = pool.filter(q => !used.has(q.id)).concat(pool.filter(q => used.has(q.id)));
+      const fresh = T.practiceQueue(topicId, state.diag ? state.diag.state[topicId].answers.map(a => a.qid) : []);
       state.practice = { topic: topicId, queue: fresh, i: 0, right: 0, stage: 'lesson', feedback: null };
     }
     const p = state.practice;

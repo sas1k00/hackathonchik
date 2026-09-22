@@ -242,3 +242,6 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
   #result-graph, #mini-graph { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   #result-graph .graph, #mini-graph .graph { min-width: 640px; }
 }
+.simtable { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.simtable th, .simtable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.simtable th { color: var(--ink-2); font-weight: 600; }

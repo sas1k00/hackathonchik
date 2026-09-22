@@ -197,6 +197,13 @@
   }
   T.Diagnostic = Diagnostic;
 
+  /* Очередь заданий для практики: сначала те, которых ученик ещё не видел (usedIds — заданные в диагностике). */
+  T.practiceQueue = function (topicId, usedIds, rand) {
+    const used = new Set(usedIds || []);
+    const pool = shuffle(questionsByTopic[topicId], rand || Math.random);
+    return pool.filter(q => !used.has(q.id)).concat(pool.filter(q => used.has(q.id)));
+  };
+
   /* Симулированный ученик: знает все темы, кроме trueGaps и всего, что от них зависит. */
   T.simulateStudent = function (trueRoots, rand, p) {
     p = Object.assign({ known: 0.92, unknown: 0.2, misRate: 0.7 }, p || {});
