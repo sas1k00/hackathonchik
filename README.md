@@ -8,6 +8,10 @@
 
 *Тамыр* (каз.) — корень.
 
+**Команда:** Bolatbay Yersultan · Zharkynuly Eren · Kydyrkhan Olzhas
+**Репозиторий:** https://github.com/sas1k00/hackathonchik
+**Демо:** https://sas1k00.github.io/hackathonchik/ *(включите GitHub Pages: Settings → Pages → Deploy from branch → main / root)*
+
 ---
 
 ## Проблема

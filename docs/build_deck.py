@@ -517,8 +517,8 @@ for i, (h_, b) in enumerate(road):
     label(hx, str(i + 1), size=18, font=DISPLAY, color=WHITE if i == 0 else BLUE)
     text(s, x, 4.55, 2.8, 0.4, h_, size=18, bold=True, color=BLUE)
     text(s, x, 4.98, 2.75, 1.0, b, size=14, color=GRAY)
-text(s, 0.8, 6.15, 8.5, 0.4, 'Команда: [Имя — роль] · [Имя — роль] · [Имя — роль]', size=17, bold=True, color=INK)
-text(s, 0.8, 6.6, 8.5, 0.35, 'GitHub: [ссылка на репозиторий]   ·   Демо: [ссылка на GitHub Pages]', size=14, color=GRAY)
+text(s, 0.8, 6.15, 8.5, 0.4, 'Команда: Bolatbay Yersultan · Zharkynuly Eren · Kydyrkhan Olzhas', size=16, bold=True, color=INK)
+text(s, 0.8, 6.6, 8.5, 0.35, 'GitHub: github.com/sas1k00/hackathonchik   ·   Демо: sas1k00.github.io/hackathonchik', size=13, color=GRAY)
 button(s, 10.15, 6.25, 2.5, 'Спасибо!')
 
 prs.save(OUT)
