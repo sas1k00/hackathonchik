@@ -34,7 +34,7 @@
     opts = opts || {};
     const roots = new Set(opts.rootGaps || []);
     const due = opts.due || new Set();
-    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'graph', role: 'img', 'aria-label': 'Карта знаний' });
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'graph', role: 'img', 'aria-label': T.t('Карта знаний') });
 
     const edges = el('g', { class: 'edges' });
     T.TOPICS.forEach(t => {
@@ -74,13 +74,13 @@
   };
 
   T.LEGEND = [
-    ['solid', 'Закреплено'],
-    ['mastered', 'Освоено'],
-    ['inferred', 'Засчитано без вопросов'],
-    ['learning', 'Изучаю'],
-    ['gap', 'Пробел'],
-    ['root', 'Корневой пробел'],
-    ['risk', 'Под угрозой'],
-    ['unknown', 'Не проверялось']
+    ['solid', T.t('Закреплено')],
+    ['mastered', T.t('Освоено')],
+    ['inferred', T.t('Засчитано без вопросов')],
+    ['learning', T.t('Изучаю')],
+    ['gap', T.t('Пробел')],
+    ['root', T.t('Корневой пробел')],
+    ['risk', T.t('Под угрозой')],
+    ['unknown', T.t('Не проверялось')]
   ];
 })();

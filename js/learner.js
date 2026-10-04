@@ -65,7 +65,7 @@
   const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
   function touchDay() { const k = dayKey(now()); if (S.days[S.days.length - 1] !== k) S.days.push(k); }
-  function logEvent(kind, topic, text) { S.log.push({ t: now(), kind, topic, text }); if (S.log.length > 60) S.log.shift(); }
+  function logEvent(kind, topic) { S.log.push({ t: now(), kind, topic }); if (S.log.length > 60) S.log.shift(); }
 
   const tp = id => S.topics[id];
   const hasOpenBelow = id => [...T.ancestors(id)].some(a => OPEN.has(tp(a).st));
@@ -90,7 +90,7 @@
       res.misconceptions.forEach(m => { S.mis[m.id] = m.count; });
       S.diag = { at: now(), asked: res.asked, roots: res.rootGaps.slice() };
       touchDay();
-      res.rootGaps.forEach(id => logEvent('diag', id, 'Диагностика нашла корневой пробел'));
+      res.rootGaps.forEach(id => logEvent('diag', id));
       save();
     },
 
@@ -109,13 +109,14 @@
     locked: id => hasOpenBelow(id),
     isDue: id => { const x = tp(id); return x.due !== null && x.due <= now() && !OPEN.has(x.st); },
 
-    /* Что делать сегодня: повторения → корень (урок или практика) → следующая непроверенная тема. */
+    /* Что делать сегодня: повторения → корень (проверка основы, урок или практика) → следующая непроверенная тема.
+       reason — почему задача попала в план; название и объяснение для неё подбирает интерфейс на нужном языке. */
     today() {
       const tasks = [];
       T.TOPICS.filter(t => L.isDue(t.id)).sort((a, b) => a.level - b.level).slice(0, 3).forEach(t => {
         const st = tp(t.id).st;
-        tasks.push({ kind: 'check', topic: t.id, min: 2, label: OK.has(st) && st !== 'inferred' ? 'Повторение' : 'Проверка',
-          why: st === 'unknown' || st === 'inferred' ? 'Ошибка в практике указала на эту тему' : 'Пора повторить, пока не забылось' });
+        // освоенная тема пришла по расписанию; остальные поставила на проверку ошибка в практике
+        tasks.push({ kind: 'check', topic: t.id, min: 2, reason: st === 'mastered' || st === 'solid' ? 'due' : 'flagged' });
       });
       L.roots().slice(0, 2).forEach(id => {
         const x = tp(id);
@@ -124,15 +125,10 @@
         const base = x.lesson ? null : T.TOPIC[id].prereq.map(p => T.TOPIC[p])
           .filter(p => tp(p.id).st === 'unknown' || tp(p.id).st === 'inferred').sort((a, b) => a.level - b.level)[0];
         if (base) {
-          if (!tasks.some(t => t.topic === base.id)) {
-            tasks.push({ kind: 'check', topic: base.id, min: 2, label: 'Проверка основы', base: id,
-              why: `На ней стоит «${T.TOPIC[id].title}» — убедимся, что корень не глубже` });
-          }
+          if (!tasks.some(t => t.topic === base.id)) tasks.push({ kind: 'check', topic: base.id, min: 2, reason: 'base', base: id });
           return;
         }
-        tasks.push(x.lesson
-          ? { kind: 'practice', topic: id, min: 5, label: 'Практика', why: `Нужно ${NEED} верных подряд без подсказок` }
-          : { kind: 'lesson', topic: id, min: 6, label: 'Урок', why: 'Корневой пробел — с него начинаем' });
+        tasks.push(x.lesson ? { kind: 'practice', topic: id, min: 5, reason: 'practice' } : { kind: 'lesson', topic: id, min: 6, reason: 'lesson' });
       });
       if (!L.roots().length) {
         // пробелов в работе нет — двигаем границу: подтверждаем выведенное и пробуем новые темы снизу вверх
@@ -140,18 +136,14 @@
           const st = tp(t.id).st;
           return (st === 'inferred' || st === 'unknown') && !L.isDue(t.id) && t.prereq.every(p => OK.has(tp(p).st));
         }).sort((a, b) => a.level - b.level)[0];
-        if (frontier) {
-          const inf = tp(frontier.id).st === 'inferred';
-          tasks.push({ kind: 'check', topic: frontier.id, min: 2, label: inf ? 'Подтвердить' : 'Новая тема',
-            why: inf ? 'Засчитана без вопросов — проверим двумя задачами' : 'Основа готова — проверим, знаешь ли ты её уже' });
-        }
+        if (frontier) tasks.push({ kind: 'check', topic: frontier.id, min: 2, reason: tp(frontier.id).st === 'inferred' ? 'confirm' : 'new' });
       }
       return tasks;
     },
 
     completeLesson(id) {
       const x = tp(id);
-      if (!x.lesson) logEvent('lesson', id, 'Урок пройден');
+      if (!x.lesson) logEvent('lesson', id);
       x.lesson = true;
       if (!OK.has(x.st)) x.st = 'learning';
       touchDay(); save();
@@ -183,7 +175,7 @@
         // уже освоенную тему дополнительная практика не откатывает к короткому интервалу
         if (x.st !== 'mastered' && x.st !== 'solid') {
           x.st = 'mastered'; x.ivl = 1; x.due = now() + DAY;
-          logEvent('mastered', id, 'Тема освоена');
+          logEvent('mastered', id);
         }
         save();
         return true;
@@ -199,11 +191,11 @@
         x.ivl = x.st === 'mastered' || x.st === 'solid' ? Math.max(3, x.ivl * 3) : 3;
         x.st = x.ivl >= 9 ? 'solid' : 'mastered';
         x.due = now() + x.ivl * DAY;
-        logEvent('review', id, x.st === 'solid' ? 'Закреплено' : 'Проверка пройдена');
+        logEvent(x.st === 'solid' ? 'solid' : 'review', id);
       } else {
         x.st = x.lesson ? 'learning' : 'gap';
         x.due = null; x.ivl = 0; x.streak = 0;
-        logEvent('lapse', id, 'Проверка не пройдена — тема вернулась в работу');
+        logEvent('lapse', id);
       }
       touchDay(); save();
       return pass;

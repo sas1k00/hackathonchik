@@ -38,7 +38,7 @@
   }
 
   function csv(rows) {
-    const head = ['Ученик'].concat(T.TOPICS.map(t => t.title), ['Корневые пробелы', 'Вопросов']);
+    const head = [T.t('Ученик')].concat(T.TOPICS.map(t => t.title), [T.t('Корневые пробелы'), T.t('Вопросов')]);
     const lines = [head].concat(rows.map(r => [r.name].concat(T.TOPICS.map(t => r.status[t.id]), [r.rootGaps.map(title).join('; '), r.asked])));
     return '﻿' + lines.map(l => l.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
   }
@@ -60,57 +60,57 @@
     app.innerHTML = `
       <section class="result-head">
         <div>
-          <p class="eyebrow">Панель учителя</p>
-          <h1>Класс: корни, а не оценки</h1>
-          <p class="lead">Вместо «средний балл 62%» — какие именно базовые темы тянут класс вниз и кого с кем объединить на 15-минутный разбор.</p>
+          <p class="eyebrow">${T.t('Панель учителя')}</p>
+          <h1>${T.t('Класс: корни, а не оценки')}</h1>
+          <p class="lead">${T.t('Вместо «средний балл 62%» — какие именно базовые темы тянут класс вниз и кого с кем объединить на 15-минутный разбор.')}</p>
         </div>
         <div class="stats">
-          <div><b>${n}</b><span>учеников</span></div>
-          <div><b>${avgAsked}</b><span>вопросов в среднем</span></div>
-          <div><b>${clean}</b><span>без пробелов</span></div>
+          <div><b>${n}</b><span>${T.t('учеников')}</span></div>
+          <div><b>${avgAsked}</b><span>${T.t('вопросов в среднем')}</span></div>
+          <div><b>${clean}</b><span>${T.t('без пробелов')}</span></div>
         </div>
       </section>
       <section class="card toolbar">
-        <label class="switch"><input type="checkbox" id="demo" ${showDemo ? 'checked' : ''}> Демо-класс <span class="chip small warn">симуляция: ${DEMO_NAMES.length} виртуальных учеников</span></label>
-        <details><summary>Добавить ученика по коду</summary>
-          <textarea id="code" rows="3" placeholder="Вставьте код TMR1… со страницы «Прогресс» ученика"></textarea>
-          <div class="row"><button class="btn small primary" id="add">Добавить</button><button class="btn small ghost" id="clear">Удалить добавленных</button><span id="msg" class="small"></span></div>
+        <label class="switch"><input type="checkbox" id="demo" ${showDemo ? 'checked' : ''}> ${T.t('Демо-класс')} <span class="chip small warn">${T.t('симуляция: {n} виртуальных учеников', { n: DEMO_NAMES.length })}</span></label>
+        <details><summary>${T.t('Добавить ученика по коду')}</summary>
+          <textarea id="code" rows="3" placeholder="${T.t('Вставьте код TMR1… со страницы «Прогресс» ученика')}"></textarea>
+          <div class="row"><button class="btn small primary" id="add">${T.t('Добавить')}</button><button class="btn small ghost" id="clear">${T.t('Удалить добавленных')}</button><span id="msg" class="small"></span></div>
         </details>
-        <button class="btn small" id="csv" ${n ? '' : 'disabled'}>Скачать CSV</button>
+        <button class="btn small" id="csv" ${n ? '' : 'disabled'}>${T.t('Скачать CSV')}</button>
       </section>
       ${n ? `
       <section class="grid2">
         <div class="card">
-          <h2>Корневые пробелы класса</h2>
-          <ul class="bars">${rootsSorted.map(([id, c]) => `<li><span class="lbl">${esc(title(id))}</span><span class="bar"><i style="width:${(c / maxRoot) * 100}%"></i></span><span class="val">${c}</span></li>`).join('') || '<li class="muted">Пробелов не найдено</li>'}</ul>
+          <h2>${T.t('Корневые пробелы класса')}</h2>
+          <ul class="bars">${rootsSorted.map(([id, c]) => `<li><span class="lbl">${esc(title(id))}</span><span class="bar"><i style="width:${(c / maxRoot) * 100}%"></i></span><span class="val">${c}</span></li>`).join('') || `<li class="muted">${T.t('Пробелов не найдено')}</li>`}</ul>
         </div>
         <div class="card">
-          <h2>Самые частые ошибки мышления</h2>
-          <ul class="mis">${misSorted.map(([id, c]) => `<li><b>${esc(T.MISCONCEPTIONS[id].title)}</b> <span class="chip small">${c} уч.</span><span class="fix">${esc(T.MISCONCEPTIONS[id].fix)}</span></li>`).join('') || '<li class="muted">Нет данных</li>'}</ul>
+          <h2>${T.t('Самые частые ошибки мышления')}</h2>
+          <ul class="mis">${misSorted.map(([id, c]) => `<li><b>${esc(T.MISCONCEPTIONS[id].title)}</b> <span class="chip small">${c} ${T.t('уч.')}</span><span class="fix">${esc(T.MISCONCEPTIONS[id].fix)}</span></li>`).join('') || `<li class="muted">${T.t('Нет данных')}</li>`}</ul>
         </div>
       </section>
       <section class="card">
-        <h2>Мини-группы для разбора</h2>
-        <div class="groups">${rootsSorted.map(([id]) => `<div class="group"><h3>${esc(title(id))} <span class="muted small">· ${groups[id].length} уч.</span></h3><p class="small">${groups[id].map(esc).join(', ')}</p><p class="tiny muted">${esc(T.TOPIC[id].rule)}</p></div>`).join('')}</div>
+        <h2>${T.t('Мини-группы для разбора')}</h2>
+        <div class="groups">${rootsSorted.map(([id]) => `<div class="group"><h3>${esc(title(id))} <span class="muted small">· ${groups[id].length} ${T.t('уч.')}</span></h3><p class="small">${groups[id].map(esc).join(', ')}</p><p class="tiny muted">${esc(T.TOPIC[id].rule)}</p></div>`).join('')}</div>
       </section>
       <section class="card">
-        <h2>Тепловая карта</h2>
+        <h2>${T.t('Тепловая карта')}</h2>
         <div class="heat-wrap"><table class="heat">
-          <thead><tr><th>Ученик</th>${T.TOPICS.map(t => `<th title="${esc(t.title)}"><span>${esc(t.short)}</span></th>`).join('')}</tr></thead>
-          <tbody>${rows.map(r => `<tr><td>${esc(r.name)}${r.demo ? '' : ' <span class="chip small">реальный</span>'}</td>${T.TOPICS.map(t => {
+          <thead><tr><th>${T.t('Ученик')}</th>${T.TOPICS.map(t => `<th title="${esc(t.title)}"><span>${esc(t.short)}</span></th>`).join('')}</tr></thead>
+          <tbody>${rows.map(r => `<tr><td>${esc(r.name)}${r.demo ? '' : ` <span class="chip small">${T.t('реальный')}</span>`}</td>${T.TOPICS.map(t => {
             const st = r.status[t.id]; const root = r.rootGaps.includes(t.id);
             return `<td class="c-${st}${root ? ' c-root' : ''}" title="${esc(t.title)}: ${esc((T.LEGEND.find(l => l[0] === (root ? 'root' : st)) || ['', st])[1])}"></td>`;
           }).join('')}</tr>`).join('')}</tbody>
         </table></div>
         ${T.legendHtml(['mastered', 'inferred', 'gap', 'root', 'risk', 'unknown'])}
-      </section>` : '<section class="card"><p>Пока нет учеников. Включите демо-класс или добавьте код ученика.</p></section>'}
+      </section>` : `<section class="card"><p>${T.t('Пока нет учеников. Включите демо-класс или добавьте код ученика.')}</p></section>`}
     `;
 
     app.querySelector('#demo').addEventListener('change', e => { showDemo = e.target.checked; T.viewTeacher(app); });
     app.querySelector('#add').addEventListener('click', () => {
       const msg = app.querySelector('#msg');
       try { T.store.addImported(T.store.decode(app.querySelector('#code').value)); T.viewTeacher(app); }
-      catch (e) { msg.textContent = 'Не удалось прочитать код — скопируйте его целиком.'; msg.className = 'small bad-msg'; }
+      catch (e) { msg.textContent = T.t('Не удалось прочитать код — скопируйте его целиком.'); msg.className = 'small bad-msg'; }
     });
     app.querySelector('#clear').addEventListener('click', () => { T.store.clearImported(); T.viewTeacher(app); });
     app.querySelector('#csv').addEventListener('click', () => {

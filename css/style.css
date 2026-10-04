@@ -229,7 +229,7 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
 .tests li.fail { color: var(--gap); font-weight: 700; }
 
 @media (max-width: 900px) {
-  .quiz, .grid2, .result-head { grid-template-columns: 1fr; }
+  .quiz, .grid2, .result-head { grid-template-columns: minmax(0, 1fr); } /* minmax(0, …): иначе карта с min-width растягивает колонку шире экрана */
   .side { order: 2; }
 }
 @media (max-width: 640px) {
@@ -320,3 +320,9 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
   .tasks li { flex-wrap: wrap; }
   .log li { grid-template-columns: 1fr; gap: 0; }
 }
+
+/* Переключатель языка */
+.lang { font: inherit; font-size: .85rem; font-weight: 600; color: var(--accent); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; margin-left: 6px; cursor: pointer; }
+.lang:hover { border-color: var(--accent); background: var(--accent-soft); }
+.topbar nav { align-items: center; flex-wrap: wrap; }
+.e-solid b { color: var(--ok); }

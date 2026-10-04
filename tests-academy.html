@@ -4,21 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamyr Academy — тесты</title>
-  <link rel="stylesheet" href="css/style.css?v=6">
+  <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
   <main>
     <section class="card">
       <h1>Тесты: контент, генераторы, модель ученика</h1>
       <p class="muted" id="summary"></p>
+      <p class="small">Язык контента: <a href="?lang=ru">русский</a> · <a href="?lang=kk">қазақша</a></p>
       <ul class="tests" id="tests"></ul>
     </section>
   </main>
-  <script src="js/data.js?v=6"></script>
+  <script src="js/data.js?v=9"></script>
   <script>window.Tamyr.LEARNER_KEY = 'tamyr.academy.test';</script>
-  <script src="js/engine.js?v=6"></script>
-  <script src="js/content.js?v=6"></script>
-  <script src="js/learner.js?v=6"></script>
+  <script src="js/i18n.js?v=9"></script>
+  <script src="js/engine.js?v=9"></script>
+  <script src="js/content.js?v=9"></script>
+  <script src="js/kk.js?v=9"></script>
+  <script src="js/learner.js?v=9"></script>
   <script>
     const T = window.Tamyr, L = T.learner;
     const out = document.getElementById('tests');
@@ -77,8 +80,9 @@
       for (let i = 0; i < 300; i++) {
         let q = T.GENERATORS.lin(rand), m = /^(\d+)x \+ (\d+) = (\d+)/.exec(q.text);
         eq(value(q.options.find(o => o.ok).t), (m[3] - m[2]) / m[1], q.text + ': ');
-        q = T.GENERATORS.pct(rand); m = /(\d+)% от (\d+)/.exec(q.text);
-        eq(value(q.options.find(o => o.ok).t), m[2] * m[1] / 100, q.text + ': ');
+        q = T.GENERATORS.pct(rand);
+        const pp = Number(/(\d+)%/.exec(q.text)[1]), aa = Number(q.text.replace(/\d+%/, '').match(/\d+/)[0]);
+        eq(value(q.options.find(o => o.ok).t), aa * pp / 100, q.text + ': ');
         q = T.GENERATORS.frac(rand);
         const ans = value(q.options.find(o => o.ok).t);
         if ((m = /^1\/(\d+) \+ 1\/(\d+)/.exec(q.text))) assert(Math.abs(ans - (1 / m[1] + 1 / m[2])) < 1e-9, q.text);
@@ -187,6 +191,85 @@
       assert(!L._load({ v: 2 })); assert(!L.exists());
       assert(L._load({ v: 1, name: 'X', topics: { frac: { st: 'hacked', seen: ['nope'], due: 'x' }, ghost: { st: 'gap' } }, mis: { nope: 3 } }));
       eq(L.topic('frac').st, 'unknown'); eq(L.topic('frac').seen, []); eq(Object.keys(L.get().mis), []);
+    });
+
+    test('Все скрипты приложения разбираются без синтаксических ошибок', () => {
+      ['data', 'i18n', 'engine', 'content', 'kk', 'learner', 'graph', 'store', 'app', 'teacher'].forEach(name => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'js/' + name + '.js?t=' + Date.now(), false); xhr.send();
+        assert(xhr.status === 200, 'нет файла ' + name);
+        try { new Function(xhr.responseText); } catch (e) { throw new Error(name + '.js: ' + e.message); }
+      });
+    });
+
+    /* ---------- Казахский перевод ---------- */
+    const CYR = /[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі]/;
+    const KK = T.KK, has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+    test('Перевод: есть казахский текст для каждой темы, ошибки мышления, цели, урока и решения', () => {
+      T.TOPICS.forEach(x => assert(has(KK.topics, x.id) && KK.topics[x.id].length >= 3, 'тема ' + x.id));
+      Object.keys(T.MISCONCEPTIONS).forEach(id => assert(has(KK.mis, id) && KK.mis[id].length === 2, 'ошибка ' + id));
+      T.GOALS.forEach(g => assert(has(KK.goals, g.id), 'цель ' + g.id));
+      T.TOPICS.forEach(x => {
+        const l = KK.lessons[x.id];
+        assert(l && l.task && l.takeaway && l.steps.length >= 3, 'урок ' + x.id);
+      });
+      T.QUESTIONS.forEach(q => assert(has(KK.sol, q.id) && KK.sol[q.id].length >= 1, 'решение ' + q.id));
+      [KK.topics, KK.mis, KK.goals, KK.lessons].forEach((o, i) => Object.keys(o).forEach(id =>
+        assert([T.TOPIC, T.MISCONCEPTIONS, Object.fromEntries(T.GOALS.map(g => [g.id, 1])), T.TOPIC][i][id], 'лишний перевод ' + id)));
+      Object.keys(KK.sol).concat(Object.keys(KK.q)).forEach(id => assert(T.QUESTION[id], 'перевод для несуществующего вопроса ' + id));
+    });
+    test('Перевод: у казахского урока столько же шагов, сколько у русского, и те же числа в решениях', () => {
+      if (T.lang === 'kk') return; // сравнивать можно только с русским оригиналом
+      const nums = a => a.join(' ').replace(/[^0-9]/g, '').split('').sort().join(''); // порядок слов в языках разный
+      T.TOPICS.forEach(x => eq(KK.lessons[x.id].steps.length, T.LESSONS[x.id].steps.length, 'урок ' + x.id + ': '));
+      T.QUESTIONS.forEach(q => eq(KK.sol[q.id].length, T.SOLUTIONS[q.id].length, 'решение ' + q.id + ': '));
+      const bad = T.QUESTIONS.filter(q => nums(KK.sol[q.id]) !== nums(T.SOLUTIONS[q.id])).map(q => q.id);
+      eq(bad, [], 'числа в решениях расходятся: ');
+    });
+    if (T.lang === 'kk') {
+      test('Қазақша: каждый вопрос и вариант со словами переведён', () => {
+        const q = T.QUESTIONS.filter(x => CYR.test(x.ru) && x.text === x.ru).map(x => x.id);
+        eq(q, [], 'вопросы без перевода: ');
+        const units = /^[^А-Яа-яЁё]*\s?(км|кг)$/; // единицы измерения пишутся одинаково
+        const o = [];
+        T.QUESTIONS.forEach(x => x.options.forEach(y => { if (CYR.test(y.ru) && y.t === y.ru && !units.test(y.ru)) o.push(x.id + ': ' + y.ru); }));
+        eq(o, [], 'варианты без перевода: ');
+      });
+      test('Қазақша: в переведённых вопросах сохранились все числа и формулы', () => {
+        const sig = s => s.replace(/[А-Яа-яЁёӘәҒғҚқҢңӨөҰұҮүҺһІі\s.,:?—«»()\-]/g, '').split('').sort().join('');
+        const loose = new Set(Object.keys(KK.q)); // переведены целиком: порядок слов другой, сверяем только цифры
+        const digits = s => s.replace(/[^0-9]/g, '').split('').sort().join('');
+        const bad = T.QUESTIONS.filter(x => (loose.has(x.id) ? digits(x.text) !== digits(x.ru) : sig(x.text) !== sig(x.ru))).map(x => x.id);
+        eq(bad, []);
+      });
+    }
+    test('Перевод интерфейса: каждая строка t(…) из app.js, graph.js и teacher.js есть в словаре', () => {
+      const missing = [];
+      ['js/app.js', 'js/graph.js', 'js/teacher.js'].forEach(file => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', file + '?t=' + Date.now(), false); xhr.send();
+        assert(xhr.status === 200, 'не удалось прочитать ' + file);
+        const re = /\bt\('((?:[^'\\]|\\.)*)'/g; let m;
+        while ((m = re.exec(xhr.responseText))) if (!has(T.UI_KK, m[1])) missing.push(m[1]);
+      });
+      eq([...new Set(missing)], []);
+    });
+    test('Перевод интерфейса: в словаре нет строк, которых нет в коде, и подстановки не потеряны', () => {
+      let src = '';
+      ['js/app.js', 'js/graph.js', 'js/teacher.js'].forEach(file => {
+        const xhr = new XMLHttpRequest(); xhr.open('GET', file + '?t=' + Date.now(), false); xhr.send(); src += xhr.responseText;
+      });
+      const unused = Object.keys(KK.ui).filter(k => !src.includes("'" + k + "'"));
+      eq(unused, [], 'лишние строки: ');
+      const optional = new Set(['hold', 'themes', 'checked', 'rw', 'days', 'd']); // русское склонение, казахскому шаблону не нужно
+      const lost = [];
+      Object.entries(KK.ui).forEach(([ru, kk]) => (ru.match(/\{\w+\}/g) || []).forEach(p => {
+        if (!kk.includes(p) && !optional.has(p.slice(1, -1))) lost.push(ru + ' → ' + p);
+      }));
+      eq(lost, [], 'потеряны подстановки: ');
+      const extra = [];
+      Object.entries(KK.ui).forEach(([ru, kk]) => (kk.match(/\{\w+\}/g) || []).forEach(p => { if (!ru.includes(p)) extra.push(ru + ' → ' + p); }));
+      eq(extra, [], 'лишние подстановки: ');
     });
 
     L.reset();
