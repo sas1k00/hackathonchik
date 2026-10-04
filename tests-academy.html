@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamyr Academy — тесты</title>
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
   <main>
@@ -15,13 +15,16 @@
       <ul class="tests" id="tests"></ul>
     </section>
   </main>
-  <script src="js/data.js?v=9"></script>
+  <script src="js/data.js?v=10"></script>
+  <script src="js/data-ent.js?v=10"></script>
   <script>window.Tamyr.LEARNER_KEY = 'tamyr.academy.test';</script>
-  <script src="js/i18n.js?v=9"></script>
-  <script src="js/engine.js?v=9"></script>
-  <script src="js/content.js?v=9"></script>
-  <script src="js/kk.js?v=9"></script>
-  <script src="js/learner.js?v=9"></script>
+  <script src="js/i18n.js?v=10"></script>
+  <script src="js/engine.js?v=10"></script>
+  <script src="js/content.js?v=10"></script>
+  <script src="js/content-ent.js?v=10"></script>
+  <script src="js/kk-ent.js?v=10"></script>
+  <script src="js/kk.js?v=10"></script>
+  <script src="js/learner.js?v=10"></script>
   <script>
     const T = window.Tamyr, L = T.learner;
     const out = document.getElementById('tests');
@@ -194,7 +197,7 @@
     });
 
     test('Все скрипты приложения разбираются без синтаксических ошибок', () => {
-      ['data', 'i18n', 'engine', 'content', 'kk', 'learner', 'graph', 'store', 'app', 'teacher'].forEach(name => {
+      ['data', 'data-ent', 'i18n', 'engine', 'content', 'content-ent', 'kk-ent', 'kk', 'learner', 'graph', 'store', 'app', 'teacher'].forEach(name => {
         const xhr = new XMLHttpRequest();
         xhr.open('GET', 'js/' + name + '.js?t=' + Date.now(), false); xhr.send();
         assert(xhr.status === 200, 'нет файла ' + name);
@@ -230,7 +233,7 @@
       test('Қазақша: каждый вопрос и вариант со словами переведён', () => {
         const q = T.QUESTIONS.filter(x => CYR.test(x.ru) && x.text === x.ru).map(x => x.id);
         eq(q, [], 'вопросы без перевода: ');
-        const units = /^[^А-Яа-яЁё]*\s?(км|кг)$/; // единицы измерения пишутся одинаково
+        const units = /^[^А-Яа-яЁё]*\s?(км|кг|см|см²|см³)$/; // единицы измерения пишутся одинаково
         const o = [];
         T.QUESTIONS.forEach(x => x.options.forEach(y => { if (CYR.test(y.ru) && y.t === y.ru && !units.test(y.ru)) o.push(x.id + ': ' + y.ru); }));
         eq(o, [], 'варианты без перевода: ');

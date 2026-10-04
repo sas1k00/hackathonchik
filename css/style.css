@@ -240,7 +240,7 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
   .qtext { font-size: 1.25rem; }
   .stats b { font-size: 1.4rem; }
   #result-graph, #mini-graph { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  #result-graph .graph, #mini-graph .graph { min-width: 640px; }
+  #result-graph .graph, #mini-graph .graph { min-width: 900px; }
 }
 .simtable { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .simtable th, .simtable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
@@ -316,7 +316,7 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
 
 @media (max-width: 640px) {
   #home-graph, #map-graph { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  #home-graph .graph, #map-graph .graph { min-width: 640px; }
+  #home-graph .graph, #map-graph .graph { min-width: 900px; }
   .tasks li { flex-wrap: wrap; }
   .log li { grid-template-columns: 1fr; gap: 0; }
 }

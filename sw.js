@@ -1,10 +1,10 @@
 ﻿/* Service worker: после первого открытия приложение работает без интернета. */
-const CACHE = 'tamyr-v10';
+const CACHE = 'tamyr-v11';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
-  './css/style.css?v=9',
-  './js/data.js?v=9', './js/i18n.js?v=9', './js/engine.js?v=9', './js/content.js?v=9', './js/kk.js?v=9', './js/learner.js?v=9', './js/graph.js?v=9',
-  './js/store.js?v=9', './js/app.js?v=9', './js/teacher.js?v=9',
+  './css/style.css?v=10',
+  './js/data.js?v=10', './js/data-ent.js?v=10', './js/i18n.js?v=10', './js/engine.js?v=10', './js/content.js?v=10', './js/content-ent.js?v=10', './js/kk-ent.js?v=10', './js/kk.js?v=10', './js/learner.js?v=10', './js/graph.js?v=10',
+  './js/store.js?v=10', './js/app.js?v=10', './js/teacher.js?v=10',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 

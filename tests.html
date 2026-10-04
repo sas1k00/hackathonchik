@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tamyr — тесты движка</title>
-  <link rel="stylesheet" href="css/style.css?v=9">
+  <link rel="stylesheet" href="css/style.css?v=10">
 </head>
 <body>
   <main>
@@ -18,9 +18,10 @@
       <div id="sim"></div>
     </section>
   </main>
-  <script src="js/data.js?v=9"></script>
-  <script src="js/engine.js?v=9"></script>
-  <script src="js/store.js?v=9"></script>
+  <script src="js/data.js?v=10"></script>
+  <script src="js/data-ent.js?v=10"></script>
+  <script src="js/engine.js?v=10"></script>
+  <script src="js/store.js?v=10"></script>
   <script>
     const T = window.Tamyr;
     const out = document.getElementById('tests');
@@ -151,6 +152,23 @@
       const bad = T.store.decode(enc(Object.assign({}, good, { r: ['frac', 'nope', '__proto__'], m: [['frac_add_across', 2], ['evil', 1], 'x'], g: 'zzz', a: -5 })));
       eq(bad.r, ['frac']); eq(bad.m, [['frac_add_across', 2]]); eq(bad.g, 'full'); eq(bad.a, 0);
       eq(T.store.sanitize({ v: 1, n: '<img src=x onerror=alert(1)>', s: 'm'.repeat(T.TOPICS.length) }).n, '<img src=x onerror=alert(1)>', 'имя сохраняется как текст (экранируется при выводе):');
+    });
+    test('Код из версии с 17 темами читается: новые темы получают статус «не проверялось»', () => {
+      const enc = o => 'TMR1.' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+      assert(T.TOPICS.length > 17, 'в графе должно быть больше 17 тем');
+      const old = T.store.expand(T.store.decode(enc({ v: 1, n: 'Старый', g: 'full', t: 1, s: 'mmg' + 'm'.repeat(14), r: ['frac'], m: [], a: 5 })));
+      eq(old.status.frac, 'gap'); eq(old.status.arith, 'mastered');
+      T.TOPICS.slice(17).forEach(t => eq(old.status[t.id], 'unknown', t.id + ':'));
+      eq(T.TOPICS.slice(0, 17).map(t => t.id).join(','), 'arith,neg,frac,pow,pct,prop,expr,root,lin,fsu,word,ineq,sys,linf,fact,quad,parab', 'порядок первых 17 тем менять нельзя: ');
+    });
+    test('Граф: в каждом вопросе 4 варианта и ровно один верный', () => {
+      T.QUESTIONS.forEach(q => { eq(q.options.length, 4, q.id + ':'); eq(q.options.filter(o => o.ok).length, 1, q.id + ':'); assert(T.TOPIC[q.topic], q.id); });
+    });
+    test('Цели диагностики: все стартовые темы существуют; «вся математика» достаёт до каждой темы', () => {
+      T.GOALS.forEach(g => g.start.forEach(id => assert(T.TOPIC[id], g.id + ': ' + id)));
+      const all = T.GOALS.find(g => g.id === 'all');
+      const reach = new Set(all.start); all.start.forEach(id => T.ancestors(id).forEach(a => reach.add(a)));
+      eq(T.TOPICS.filter(t => !reach.has(t.id)).map(t => t.id), []);
     });
     test('Банк: 6 вопросов на каждую тему, id уникальны, варианты в вопросе не повторяются', () => {
       T.TOPICS.forEach(t => eq(T.questionsByTopic[t.id].length, 6, t.id + ':'));

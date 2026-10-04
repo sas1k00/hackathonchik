@@ -3,14 +3,20 @@
  */
 (function () {
   const T = window.Tamyr;
-  const W = 1080, H = 660, NW = 164, NH = 50;
+  const NW = 164, NH = 50;
   const OPEN = new Set(['gap', 'learning']);
+
+  // Размер холста считается по графу: ширина — по самому людному уровню, высота — по числу уровней.
+  const perLevel = {};
+  T.TOPICS.forEach(t => { perLevel[t.level] = (perLevel[t.level] || 0) + 1; });
+  const maxLevel = Math.max(...T.TOPICS.map(t => t.level));
+  const W = Math.max(1080, (Math.max(...Object.values(perLevel)) + 1) * (NW + 14));
+  const H = 100 + maxLevel * 93;
 
   function layout() {
     const levels = {};
     T.TOPICS.forEach(t => { (levels[t.level] = levels[t.level] || []).push(t.id); });
     const pos = {};
-    const maxLevel = Math.max(...T.TOPICS.map(t => t.level));
     Object.keys(levels).forEach(l => {
       const ids = levels[l];
       const gap = W / (ids.length + 1);

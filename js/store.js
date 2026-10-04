@@ -5,6 +5,7 @@
   const T = window.Tamyr;
   const KEY = 'tamyr.v1.sessions';
   const KEY_IMPORTED = 'tamyr.v1.imported';
+  const LEGACY_TOPICS = 17;
   const CODE = { mastered: 'm', inferred: 'i', gap: 'g', risk: 'r', unknown: 'u' };
   const DECODE = Object.fromEntries(Object.entries(CODE).map(([k, v]) => [v, k]));
 
@@ -40,7 +41,10 @@
     /* Код приходит от пользователя: принимаем только известные темы и ошибки, иначе панель учителя может сломаться. */
     sanitize(c) {
       if (!c || typeof c !== 'object' || c.v !== 1) return null;
-      if (typeof c.s !== 'string' || c.s.length !== T.TOPICS.length || /[^migru]/.test(c.s)) return null;
+      if (typeof c.s !== 'string' || /[^migru]/.test(c.s)) return null;
+      // Код из версии с 17 темами: новые темы добавлены в конец списка, поэтому дополняем «не проверялось».
+      const s = c.s.length === LEGACY_TOPICS && T.TOPICS.length > LEGACY_TOPICS ? c.s + 'u'.repeat(T.TOPICS.length - LEGACY_TOPICS) : c.s;
+      if (s.length !== T.TOPICS.length) return null;
       const name = typeof c.n === 'string' ? c.n.trim().slice(0, 40) : '';
       if (!name) return null;
       const own = (obj, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(obj, k);
@@ -50,7 +54,7 @@
         n: name,
         g: T.GOALS.some(g => g.id === c.g) ? c.g : 'full',
         t: num(c.t, 4102444800000) || Date.now(),
-        s: c.s,
+        s,
         r: Array.isArray(c.r) ? [...new Set(c.r.filter(id => own(T.TOPIC, id)))] : [],
         m: Array.isArray(c.m) ? c.m.filter(x => Array.isArray(x) && own(T.MISCONCEPTIONS, x[0])).map(x => [x[0], num(x[1], 1000) || 1]) : [],
         a: num(c.a, 1000),

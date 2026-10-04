@@ -68,20 +68,22 @@
         <div class="step"><span>2</span><h3>${t('Урок и практика')}</h3><p>${t('Правило, разбор примера по шагам и задачи с подсказками. После ошибки — объяснение именно твоей ошибки, а не просто «неверно».')}</p></div>
         <div class="step"><span>3</span><h3>${t('Закрепление')}</h3><p>${t('Освоенная тема возвращается через день, потом через три, потом через девять. Знание остаётся до экзамена, а не до вечера.')}</p></div>
       </section>
-      <p class="muted small">${t('Прототип. Сейчас внутри {n} тем алгебры 5–9 классов — основа для 7 из 18 разделов спецификации ЕНТ по математике. Прогресс хранится только на этом устройстве.', { n: T.TOPICS.length })}</p>`;
+      <p class="muted small">${t('Прототип. Внутри {n} тем — по каждой из 18 тем спецификации ЕНТ по математике есть хотя бы одна, но только на базовом уровне и без чертежей. Прогресс хранится только на этом устройстве.', { n: T.TOPICS.length })}</p>`;
   }
 
   /* ---------- Старт ---------- */
+  // какие цели диагностики предлагать и в каком порядке (остальные остаются доступны движку и тестам)
+  const START_GOALS = ['full', 'all', 'alg2', 'calc', 'geom', 'quad'];
   function viewStart() {
     app.innerHTML = `
       <section class="card narrow">
         <h1>${t('С чего начнём?')}</h1>
-        <p class="muted">${t('Диагностика — от нескольких вопросов до 35: чем больше пробелов, тем глубже спускаемся. Её можно остановить в любой момент — план построится по тому, что уже известно. Не знаешь ответ — жми «Не знаю»: угадывание портит карту.')}</p>
+        <p class="muted">${t('Диагностика — от нескольких вопросов до нескольких десятков: чем больше пробелов, тем глубже спускаемся. Её можно остановить в любой момент — план построится по тому, что уже известно. Не знаешь ответ — жми «Не знаю»: угадывание портит карту.')}</p>
         ${L.exists() ? `<p class="note">${t('Новая диагностика заменит текущий прогресс.')}</p>` : ''}
         <form id="start-form">
           <label class="field"><span>${t('Имя')}</span><input id="name" required maxlength="40" autocomplete="given-name" value="${esc(ui.name || (L.exists() ? L.get().name : ''))}" placeholder="${t('Например, Айгерим')}"></label>
           <fieldset class="goals"><legend>${t('Что проверяем?')}</legend>
-            ${T.GOALS.map(g => `<label class="goal"><input type="radio" name="goal" value="${g.id}" ${g.id === ui.goal ? 'checked' : ''}><span><b>${g.title}</b><small>${g.desc}</small></span></label>`).join('')}
+            ${START_GOALS.map(id => T.GOALS.find(g => g.id === id)).filter(Boolean).map(g => `<label class="goal"><input type="radio" name="goal" value="${g.id}" ${g.id === ui.goal ? 'checked' : ''}><span><b>${g.title}</b><small>${g.desc}</small></span></label>`).join('')}
             <label class="goal"><input type="radio" name="goal" value="none" ${ui.goal === 'none' ? 'checked' : ''}><span><b>${t('Без диагностики')}</b><small>${t('Начать с основ: каждая тема проверяется двумя задачами по ходу')}</small></span></label>
           </fieldset>
           <button class="btn primary" type="submit">${t('Начать')}</button>
@@ -162,7 +164,7 @@
   function statsHtml() {
     const c = L.counts(), s = L.streakDays();
     return `<div class="stats">
-      <div><b>${L.readiness()}%</b><span>${t('готовность по базе алгебры')}</span></div>
+      <div><b>${L.readiness()}%</b><span>${t('готовность по карте тем')}</span></div>
       <div><b>${c.done}<small>/${T.TOPICS.length}</small></b><span>${t('тем освоено')}</span></div>
       <div><b>${s}</b><span>${t('{d} подряд', { d: plural(s, 'день', 'дня', 'дней') })}</span></div>
     </div>`;
