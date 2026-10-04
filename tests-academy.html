@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tamyr Academy — тесты</title>
+  <link rel="stylesheet" href="css/style.css?v=6">
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>Тесты: контент, генераторы, модель ученика</h1>
+      <p class="muted" id="summary"></p>
+      <ul class="tests" id="tests"></ul>
+    </section>
+  </main>
+  <script src="js/data.js?v=6"></script>
+  <script>window.Tamyr.LEARNER_KEY = 'tamyr.academy.test';</script>
+  <script src="js/engine.js?v=6"></script>
+  <script src="js/content.js?v=6"></script>
+  <script src="js/learner.js?v=6"></script>
+  <script>
+    const T = window.Tamyr, L = T.learner;
+    const out = document.getElementById('tests');
+    const results = [];
+    function test(name, fn) {
+      let ok = false, err = '';
+      try { fn(); ok = true; } catch (e) { err = e.message; }
+      results.push({ name, ok, err });
+      out.insertAdjacentHTML('beforeend', `<li class="${ok ? 'pass' : 'fail'}">${ok ? '✓' : '✗'} ${name}${err ? ' — ' + err : ''}</li>`);
+    }
+    function assert(c, m) { if (!c) throw new Error(m || 'assertion failed'); }
+    function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((m || '') + ` ожидалось ${JSON.stringify(b)}, получено ${JSON.stringify(a)}`); }
+    const norm = s => s.toLowerCase().replace(/\s+/g, ' ');
+
+    /* ---------- Контент ---------- */
+    test('У каждой темы есть урок минимум из 3 шагов и вывод', () => T.TOPICS.forEach(t => {
+      const l = T.LESSONS[t.id];
+      assert(l && l.task && l.takeaway && l.steps.length >= 3, t.id);
+      l.steps.forEach(s => assert(s.length === 2 && s[0] && s[1], t.id));
+    }));
+    test('У каждого вопроса банка есть пошаговое решение', () => T.QUESTIONS.forEach(q => assert((T.SOLUTIONS[q.id] || []).length >= 1, q.id)));
+    test('Нет решений для несуществующих вопросов', () => Object.keys(T.SOLUTIONS).forEach(id => assert(T.QUESTION[id], id)));
+    test('Каждое решение приходит к верному ответу (текст ответа есть в решении)', () => {
+      const bad = T.QUESTIONS.filter(q => !norm(T.SOLUTIONS[q.id].join(' | ')).includes(norm(q.options.find(o => o.ok).t))).map(q => q.id);
+      eq(bad, []);
+    });
+
+    /* ---------- Генераторы ---------- */
+    const value = s => { // «3/4» → 0.75, «−5» → −5, «≈2,67» → 2.67; для буквенных ответов — null
+      const m = /^≈?(−?\d+(?:,\d+)?)(?:\/(\d+))?$/.exec(s);
+      if (!m) return null;
+      const n = Number(m[1].replace('−', '-').replace(',', '.'));
+      return m[2] ? n / Number(m[2]) : n;
+    };
+    Object.keys(T.GENERATORS).forEach(topic => {
+      test(`Генератор «${T.TOPIC[topic].title}»: 500 задач — 4 разных варианта, один верный, метки ошибок существуют`, () => {
+        const rand = T.rng(42);
+        for (let i = 0; i < 500; i++) {
+          const q = T.GENERATORS[topic](rand);
+          eq(q.topic, topic);
+          eq(q.options.length, 4, q.text + ': ');
+          eq(q.options.filter(o => o.ok).length, 1, q.text + ': ');
+          eq(new Set(q.options.map(o => o.t)).size, 4, q.text + ': ');
+          assert(q.sol.length >= 2, q.text + ': нет решения');
+          q.options.forEach(o => { if (o.mis) assert(T.MISCONCEPTIONS[o.mis], o.mis); });
+          const right = value(q.options.find(o => o.ok).t);
+          if (right !== null) q.options.filter(o => !o.ok).forEach(o => {
+            const v = value(o.t);
+            assert(v === null || Math.abs(v - right) > 1e-9, `${q.text}: неверный вариант «${o.t}» равен верному`);
+          });
+        }
+      });
+    });
+    test('Генераторы считают верно (независимая проверка арифметики)', () => {
+      const rand = T.rng(7);
+      for (let i = 0; i < 300; i++) {
+        let q = T.GENERATORS.lin(rand), m = /^(\d+)x \+ (\d+) = (\d+)/.exec(q.text);
+        eq(value(q.options.find(o => o.ok).t), (m[3] - m[2]) / m[1], q.text + ': ');
+        q = T.GENERATORS.pct(rand); m = /(\d+)% от (\d+)/.exec(q.text);
+        eq(value(q.options.find(o => o.ok).t), m[2] * m[1] / 100, q.text + ': ');
+        q = T.GENERATORS.frac(rand);
+        const ans = value(q.options.find(o => o.ok).t);
+        if ((m = /^1\/(\d+) \+ 1\/(\d+)/.exec(q.text))) assert(Math.abs(ans - (1 / m[1] + 1 / m[2])) < 1e-9, q.text);
+        else { m = /^(\d+)\/(\d+) : (\d+)\/(\d+)/.exec(q.text); assert(Math.abs(ans - (m[1] / m[2]) / (m[3] / m[4])) < 1e-9, q.text); }
+        q = T.GENERATORS.neg(rand);
+        const expr = q.text.replace(' = ?', '').replace(/−/g, '-').replace(/·/g, '*').replace(/- \(-(\d+)\)/, '+ $1');
+        eq(value(q.options.find(o => o.ok).t), Function('return ' + expr)(), q.text + ': ');
+        q = T.GENERATORS.arith(rand);
+        eq(value(q.options.find(o => o.ok).t), Function('return ' + q.text.replace(' = ?', '').replace(/·/g, '*').replace(/:/g, '/'))(), q.text + ': ');
+      }
+    });
+    test('nextQuestion: сначала невиданные из банка, без генератора — не повторяет последний', () => {
+      const seen = [];
+      for (let i = 0; i < 6; i++) { const q = T.nextQuestion('quad', seen, T.rng(i)); assert(!seen.includes(q.id), 'повтор'); seen.push(q.id); }
+      for (let i = 0; i < 20; i++) assert(T.nextQuestion('quad', seen, T.rng(i)).id !== seen[5], 'повтор последнего');
+      assert(T.nextQuestion('frac', T.questionsByTopic.frac.map(q => q.id), T.rng(1)).gen, 'банк исчерпан — должен включиться генератор');
+    });
+
+    /* ---------- Модель ученика ---------- */
+    function seeded() { // ученик с единственным настоящим корнем — дроби
+      const rand = T.rng(11), d = new T.Diagnostic(T.GOALS[0].start, { rand });
+      const s = T.simulateStudent(['frac'], rand, { known: 1, unknown: 0, misRate: 1 });
+      let cur; while ((cur = d.next())) d.answer(s.pick(cur));
+      L.reset(); L.fromDiagnostic('Тест', d.result());
+    }
+    const q0 = id => T.questionsByTopic[id][0];
+    function master(id) { for (let i = 0; i < L.NEED; i++) L.practiceAnswer(id, true, true); }
+
+    test('Диагностика → модель: корень — дроби, первый шаг плана — урок по дробям', () => {
+      seeded();
+      eq(L.roots(), ['frac']);
+      eq(L.topic('frac').st, 'gap');
+      const t = L.today()[0];
+      eq([t.kind, t.topic], ['lesson', 'frac']);
+      assert(L.locked('pct') && !L.locked('frac'), 'темы над корнем должны быть закрыты');
+    });
+    test('Урок переводит тему в «изучаю», план предлагает практику', () => {
+      seeded(); L.completeLesson('frac');
+      eq(L.topic('frac').st, 'learning');
+      eq(L.today()[0].kind, 'practice');
+    });
+    test('Освоение: нужно 3 верных подряд; ошибка сбрасывает серию; ответ с подсказкой не считается', () => {
+      seeded(); L.completeLesson('frac');
+      assert(!L.practiceAnswer('frac', true, true)); assert(!L.practiceAnswer('frac', true, true));
+      assert(!L.practiceAnswer('frac', false, true), 'ошибка');
+      eq(L.topic('frac').streak, 0);
+      assert(!L.practiceAnswer('frac', true, true)); assert(!L.practiceAnswer('frac', true, false), 'с подсказкой');
+      eq(L.topic('frac').streak, 1);
+      assert(!L.practiceAnswer('frac', true, true)); assert(L.practiceAnswer('frac', true, true), 'третий подряд');
+      eq(L.topic('frac').st, 'mastered');
+    });
+    test('После освоения корня открывается следующая тема пути', () => {
+      seeded(); L.completeLesson('frac'); master('frac');
+      assert(!L.roots().includes('frac'));
+      assert(L.roots().length > 0 && L.roots().every(id => !L.locked(id)), 'новые корни');
+    });
+    test('Интервальные повторения: 1 день → 3 → 9 (закреплено); провал возвращает в работу', () => {
+      seeded(); L.completeLesson('frac'); master('frac');
+      assert(!L.isDue('frac'), 'сегодня повторять рано');
+      L.advance(1); assert(L.isDue('frac'), 'через день — пора');
+      eq(L.today()[0].topic, 'frac'); eq(L.today()[0].kind, 'check');
+      assert(L.checkResult('frac', 2)); eq(L.topic('frac').ivl, 3); assert(!L.isDue('frac'));
+      L.advance(3); assert(L.isDue('frac'));
+      assert(L.checkResult('frac', 2)); eq(L.topic('frac').ivl, 9); eq(L.topic('frac').st, 'solid');
+      L.advance(9); assert(!L.checkResult('frac', 1)); eq(L.topic('frac').st, 'learning');
+      assert(L.roots().includes('frac'), 'забытая тема снова в плане');
+    });
+    test('Ошибка «чужой» темы ставит ту тему на проверку сегодня', () => {
+      seeded();
+      eq(L.topic('neg').st === 'gap' || L.topic('neg').st === 'learning', false);
+      const flagged = L.recordAnswer('expr', q0('expr'), { t: 'x', mis: 'neg_mult_sign' });
+      eq(flagged, 'neg'); assert(L.isDue('neg'));
+      eq(L.recordAnswer('frac', q0('frac'), { t: 'x', mis: 'frac_add_across' }), null, 'своя ошибка: ');
+    });
+    test('Без диагностики: план начинает с проверки базовой темы; провал превращает её в пробел', () => {
+      L.reset(); L.startBlank('Тест');
+      const t = L.today()[0];
+      eq([t.kind, T.TOPIC[t.topic].level], ['check', 0]);
+      assert(!L.checkResult(t.topic, 0)); eq(L.topic(t.topic).st, 'gap');
+      eq(L.today()[0].kind, 'lesson');
+    });
+    test('Пробел над непроверенной основой: сначала проверяем основу, потом урок', () => {
+      L.reset(); L.startBlank('Тест');
+      L.checkResult('fsu', 0); // как после остановленной диагностики: пробел есть, основа (степени, выражения) не проверена
+      let t = L.today()[0];
+      eq([t.kind, t.topic, t.base], ['check', 'pow', 'fsu']);
+      L.checkResult('pow', 2); t = L.today()[0];
+      eq([t.kind, t.topic], ['check', 'expr']);
+      L.checkResult('expr', 0); // корень оказался глубже
+      assert(L.roots().includes('expr') && !L.roots().includes('fsu'), 'корень должен сместиться вниз');
+    });
+    test('Проверка засчитанной темы подтверждает её', () => {
+      seeded();
+      const inf = T.TOPICS.find(x => L.topic(x.id).st === 'inferred');
+      assert(inf, 'в демо должна быть засчитанная тема');
+      assert(L.checkResult(inf.id, 2)); eq(L.topic(inf.id).st, 'mastered');
+    });
+    test('Готовность растёт по мере освоения; серия дней считается', () => {
+      seeded(); const before = L.readiness();
+      L.completeLesson('frac'); master('frac');
+      assert(L.readiness() > before, 'готовность');
+      eq(L.streakDays(), 1); L.advance(1); L.completeLesson('pct'); eq(L.streakDays(), 2);
+      L.advance(3); eq(L.streakDays(), 0, 'пропуск обнуляет серию: ');
+    });
+    test('Повреждённые сохранённые данные не ломают модель', () => {
+      assert(!L._load({ v: 2 })); assert(!L.exists());
+      assert(L._load({ v: 1, name: 'X', topics: { frac: { st: 'hacked', seen: ['nope'], due: 'x' }, ghost: { st: 'gap' } }, mis: { nope: 3 } }));
+      eq(L.topic('frac').st, 'unknown'); eq(L.topic('frac').seen, []); eq(Object.keys(L.get().mis), []);
+    });
+
+    L.reset();
+    const failed = results.filter(r => !r.ok).length;
+    document.getElementById('summary').textContent = `${results.length - failed} из ${results.length} пройдено` + (failed ? ` · провалено: ${failed}` : '');
+    document.title = (failed ? '✗ ' : '✓ ') + document.title;
+  </script>
+</body>
+</html>

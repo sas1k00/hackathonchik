@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tamyr — корень пробелов в знаниях</title>
-  <meta name="description" content="Адаптивная диагностика по математике: находит не ошибку, а её причину.">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <title>Tamyr — подготовка к ЕНТ от корня</title>
+  <meta name="description" content="Находит корневой пробел, объясняет тему по шагам и возвращает её на повторение, пока она не закрепится.">
+  <link rel="stylesheet" href="css/style.css?v=6">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#1f6f5c">
   <link rel="icon" href="icons/icon-192.png">
@@ -15,23 +15,26 @@
   <header class="topbar">
     <a class="brand" href="#home" aria-label="Tamyr — на главную">
       <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M16 4v12M16 16c-4 2-7 6-8 12M16 16c4 2 7 6 8 12M16 16v12M16 10c-3-1-5-3-6-6M16 10c3-1 5-3 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
-      <span>Tamyr</span>
+      <span>Tamyr <small>Academy</small></span>
     </a>
     <nav>
-      <a href="#home" data-nav="home">Главная</a>
-      <a href="#setup" data-nav="setup">Ученику</a>
+      <a href="#home" data-nav="home">Сегодня</a>
+      <a href="#map" data-nav="map">Карта</a>
+      <a href="#progress" data-nav="progress">Прогресс</a>
       <a href="#teacher" data-nav="teacher">Учителю</a>
     </nav>
   </header>
   <main id="app" tabindex="-1"></main>
-  <footer class="foot">Tamyr · VentureHack 2026 · Трек EduTech и образование будущего</footer>
+  <footer class="foot">Tamyr · прогресс хранится на этом устройстве</footer>
 
-  <script src="js/data.js?v=4"></script>
-  <script src="js/engine.js?v=4"></script>
-  <script src="js/graph.js?v=4"></script>
-  <script src="js/store.js?v=4"></script>
-  <script src="js/app.js?v=4"></script>
-  <script src="js/teacher.js?v=4"></script>
+  <script src="js/data.js?v=6"></script>
+  <script src="js/engine.js?v=6"></script>
+  <script src="js/content.js?v=6"></script>
+  <script src="js/learner.js?v=6"></script>
+  <script src="js/graph.js?v=6"></script>
+  <script src="js/store.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
+  <script src="js/teacher.js?v=6"></script>
   <script>
     // Офлайн-режим: работает на http(s), при открытии файла двойным кликом просто пропускается
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {

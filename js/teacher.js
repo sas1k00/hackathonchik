@@ -73,7 +73,7 @@
       <section class="card toolbar">
         <label class="switch"><input type="checkbox" id="demo" ${showDemo ? 'checked' : ''}> Демо-класс <span class="chip small warn">симуляция: ${DEMO_NAMES.length} виртуальных учеников</span></label>
         <details><summary>Добавить ученика по коду</summary>
-          <textarea id="code" rows="3" placeholder="Вставьте код TMR1… со страницы результата ученика"></textarea>
+          <textarea id="code" rows="3" placeholder="Вставьте код TMR1… со страницы «Прогресс» ученика"></textarea>
           <div class="row"><button class="btn small primary" id="add">Добавить</button><button class="btn small ghost" id="clear">Удалить добавленных</button><span id="msg" class="small"></span></div>
         </details>
         <button class="btn small" id="csv" ${n ? '' : 'disabled'}>Скачать CSV</button>
@@ -102,7 +102,7 @@
             return `<td class="c-${st}${root ? ' c-root' : ''}" title="${esc(t.title)}: ${esc((T.LEGEND.find(l => l[0] === (root ? 'root' : st)) || ['', st])[1])}"></td>`;
           }).join('')}</tr>`).join('')}</tbody>
         </table></div>
-        ${T.legendHtml()}
+        ${T.legendHtml(['mastered', 'inferred', 'gap', 'root', 'risk', 'unknown'])}
       </section>` : '<section class="card"><p>Пока нет учеников. Включите демо-класс или добавьте код ученика.</p></section>'}
     `;
 

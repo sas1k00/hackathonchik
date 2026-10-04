@@ -1,0 +1,243 @@
+/*
+ * Модель ученика: что освоено, что повторять и что делать сегодня.
+ *
+ * Статус темы:
+ *   unknown  — не проверялась            gap      — пробел (нужен урок)
+ *   learning — урок пройден, идёт практика
+ *   inferred — засчитана диагностикой без вопросов (ждёт подтверждения)
+ *   mastered — освоена (3 верных подряд без подсказок или пройденная проверка)
+ *   solid    — закреплена (выдержала повторения с интервалом 9+ дней)
+ *
+ * Интервальные повторения: после освоения тема возвращается через 1 день, затем интервал утраивается (3 → 9 → 27).
+ * Провал повторения возвращает тему в работу. Ошибка «чужой» темы в практике ставит ту тему на проверку сегодня.
+ */
+(function () {
+  const T = window.Tamyr;
+  const KEY = T.LEARNER_KEY || 'tamyr.academy.v1'; // tests.html подменяет ключ, чтобы не трогать настоящий прогресс
+  const DAY = 86400000;
+  const NEED = 3;        // верных подряд для освоения
+  const CHECK_SIZE = 2;  // вопросов в проверке/повторении
+  const OPEN = new Set(['gap', 'learning']);          // тема в работе
+  const OK = new Set(['mastered', 'solid', 'inferred']);
+
+  let mem = null; // запасное хранилище, если localStorage недоступен
+  function read() {
+    try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : mem; } catch (e) { return mem; }
+  }
+  function write(s) {
+    mem = s;
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* приватный режим — живём в памяти */ }
+  }
+
+  function blank(name) {
+    const topics = {};
+    T.TOPICS.forEach(t => { topics[t.id] = { st: 'unknown', streak: 0, seen: [], lesson: false, due: null, ivl: 0 }; });
+    return { v: 1, name: name || 'Ученик', created: Date.now(), offset: 0, topics, mis: {}, log: [], days: [], diag: null };
+  }
+
+  /* Чужие/старые данные не должны ломать приложение: добавляем недостающие темы, выбрасываем неизвестные статусы. */
+  function sanitize(s) {
+    if (!s || typeof s !== 'object' || s.v !== 1 || !s.topics) return null;
+    const base = blank(typeof s.name === 'string' ? s.name.slice(0, 40) : '');
+    T.TOPICS.forEach(t => {
+      const x = s.topics[t.id];
+      if (!x || typeof x !== 'object') return;
+      const b = base.topics[t.id];
+      if (OPEN.has(x.st) || OK.has(x.st) || x.st === 'unknown') b.st = x.st;
+      b.streak = Number.isFinite(x.streak) ? x.streak : 0;
+      b.seen = Array.isArray(x.seen) ? x.seen.filter(id => T.QUESTION[id]) : [];
+      b.lesson = x.lesson === true;
+      b.due = Number.isFinite(x.due) ? x.due : null;
+      b.ivl = Number.isFinite(x.ivl) ? x.ivl : 0;
+    });
+    base.created = Number.isFinite(s.created) ? s.created : base.created;
+    base.offset = Number.isFinite(s.offset) ? s.offset : 0;
+    Object.keys(s.mis || {}).forEach(k => { if (T.MISCONCEPTIONS[k] && Number.isFinite(s.mis[k])) base.mis[k] = s.mis[k]; });
+    base.log = Array.isArray(s.log) ? s.log.filter(e => e && T.TOPIC[e.topic]).slice(-60) : [];
+    base.days = Array.isArray(s.days) ? s.days.filter(d => typeof d === 'string').slice(-400) : [];
+    base.diag = s.diag && typeof s.diag === 'object' ? s.diag : null;
+    return base;
+  }
+
+  let S = sanitize(read());
+  const save = () => write(S);
+  const now = () => Date.now() + (S ? S.offset : 0);
+  const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+  function touchDay() { const k = dayKey(now()); if (S.days[S.days.length - 1] !== k) S.days.push(k); }
+  function logEvent(kind, topic, text) { S.log.push({ t: now(), kind, topic, text }); if (S.log.length > 60) S.log.shift(); }
+
+  const tp = id => S.topics[id];
+  const hasOpenBelow = id => [...T.ancestors(id)].some(a => OPEN.has(tp(a).st));
+
+  const L = {
+    NEED, CHECK_SIZE,
+    exists: () => !!S,
+    get: () => S,
+    now,
+    reset() { S = null; mem = null; try { localStorage.removeItem(KEY); } catch (e) { /* нет хранилища */ } },
+    startBlank(name) { S = blank(name); save(); },
+
+    /* Перенос результата диагностики в модель ученика. */
+    fromDiagnostic(name, res) {
+      S = blank(name);
+      T.TOPICS.forEach(t => {
+        const st = res.status[t.id], x = tp(t.id);
+        if (st === 'mastered') { x.st = 'mastered'; x.ivl = 3; x.due = now() + 3 * DAY; }
+        else if (st === 'inferred') x.st = 'inferred';
+        else if (st === 'gap') x.st = 'gap';
+      });
+      res.misconceptions.forEach(m => { S.mis[m.id] = m.count; });
+      S.diag = { at: now(), asked: res.asked, roots: res.rootGaps.slice() };
+      touchDay();
+      res.rootGaps.forEach(id => logEvent('diag', id, 'Диагностика нашла корневой пробел'));
+      save();
+    },
+
+    topic: tp,
+    /* Статусы для карты: непроверенные темы над пробелом показываем «под угрозой». */
+    statusMap() {
+      const out = {};
+      T.TOPICS.forEach(t => { const st = tp(t.id).st; out[t.id] = st === 'unknown' && hasOpenBelow(t.id) ? 'risk' : st; });
+      return out;
+    },
+    /* Корни: темы в работе, под которыми нет других тем в работе. С них и начинаем. */
+    roots() {
+      return T.TOPICS.filter(t => OPEN.has(tp(t.id).st) && !hasOpenBelow(t.id)).sort((a, b) => a.level - b.level).map(t => t.id);
+    },
+    openTopics() { return T.TOPICS.filter(t => OPEN.has(tp(t.id).st)).sort((a, b) => a.level - b.level).map(t => t.id); },
+    locked: id => hasOpenBelow(id),
+    isDue: id => { const x = tp(id); return x.due !== null && x.due <= now() && !OPEN.has(x.st); },
+
+    /* Что делать сегодня: повторения → корень (урок или практика) → следующая непроверенная тема. */
+    today() {
+      const tasks = [];
+      T.TOPICS.filter(t => L.isDue(t.id)).sort((a, b) => a.level - b.level).slice(0, 3).forEach(t => {
+        const st = tp(t.id).st;
+        tasks.push({ kind: 'check', topic: t.id, min: 2, label: OK.has(st) && st !== 'inferred' ? 'Повторение' : 'Проверка',
+          why: st === 'unknown' || st === 'inferred' ? 'Ошибка в практике указала на эту тему' : 'Пора повторить, пока не забылось' });
+      });
+      L.roots().slice(0, 2).forEach(id => {
+        const x = tp(id);
+        // Диагностику могли остановить раньше времени: если под «корнем» есть непроверенная основа,
+        // сначала убеждаемся, что настоящий корень не глубже.
+        const base = x.lesson ? null : T.TOPIC[id].prereq.map(p => T.TOPIC[p])
+          .filter(p => tp(p.id).st === 'unknown' || tp(p.id).st === 'inferred').sort((a, b) => a.level - b.level)[0];
+        if (base) {
+          if (!tasks.some(t => t.topic === base.id)) {
+            tasks.push({ kind: 'check', topic: base.id, min: 2, label: 'Проверка основы', base: id,
+              why: `На ней стоит «${T.TOPIC[id].title}» — убедимся, что корень не глубже` });
+          }
+          return;
+        }
+        tasks.push(x.lesson
+          ? { kind: 'practice', topic: id, min: 5, label: 'Практика', why: `Нужно ${NEED} верных подряд без подсказок` }
+          : { kind: 'lesson', topic: id, min: 6, label: 'Урок', why: 'Корневой пробел — с него начинаем' });
+      });
+      if (!L.roots().length) {
+        // пробелов в работе нет — двигаем границу: подтверждаем выведенное и пробуем новые темы снизу вверх
+        const frontier = T.TOPICS.filter(t => {
+          const st = tp(t.id).st;
+          return (st === 'inferred' || st === 'unknown') && !L.isDue(t.id) && t.prereq.every(p => OK.has(tp(p).st));
+        }).sort((a, b) => a.level - b.level)[0];
+        if (frontier) {
+          const inf = tp(frontier.id).st === 'inferred';
+          tasks.push({ kind: 'check', topic: frontier.id, min: 2, label: inf ? 'Подтвердить' : 'Новая тема',
+            why: inf ? 'Засчитана без вопросов — проверим двумя задачами' : 'Основа готова — проверим, знаешь ли ты её уже' });
+        }
+      }
+      return tasks;
+    },
+
+    completeLesson(id) {
+      const x = tp(id);
+      if (!x.lesson) logEvent('lesson', id, 'Урок пройден');
+      x.lesson = true;
+      if (!OK.has(x.st)) x.st = 'learning';
+      touchDay(); save();
+    },
+
+    /* Запоминаем заданный вопрос банка и метку ошибки. Возвращает «домашнюю» тему ошибки, если она поставлена на проверку. */
+    recordAnswer(id, q, opt) {
+      const x = tp(id);
+      if (!q.gen && !x.seen.includes(q.id)) x.seen.push(q.id);
+      if (x.seen.length >= T.questionsByTopic[id].length) x.seen = x.seen.slice(-1); // банк пройден — начинаем круг заново
+      touchDay();
+      let flagged = null;
+      if (opt && opt.mis) {
+        S.mis[opt.mis] = (S.mis[opt.mis] || 0) + 1;
+        const home = T.MISCONCEPTIONS[opt.mis].home;
+        if (home !== id && !OPEN.has(tp(home).st)) { tp(home).due = now(); flagged = home; }
+      }
+      save();
+      return flagged;
+    },
+
+    /* Ответ в практике. clean — без сильных подсказок. Возвращает true, когда тема освоена. */
+    practiceAnswer(id, correct, clean) {
+      const x = tp(id);
+      if (!correct) x.streak = 0;
+      else if (clean) x.streak++;
+      if (x.streak >= NEED) {
+        x.streak = 0;
+        // уже освоенную тему дополнительная практика не откатывает к короткому интервалу
+        if (x.st !== 'mastered' && x.st !== 'solid') {
+          x.st = 'mastered'; x.ivl = 1; x.due = now() + DAY;
+          logEvent('mastered', id, 'Тема освоена');
+        }
+        save();
+        return true;
+      }
+      save();
+      return false;
+    },
+
+    /* Итог проверки/повторения. */
+    checkResult(id, right) {
+      const x = tp(id), pass = right >= CHECK_SIZE;
+      if (pass) {
+        x.ivl = x.st === 'mastered' || x.st === 'solid' ? Math.max(3, x.ivl * 3) : 3;
+        x.st = x.ivl >= 9 ? 'solid' : 'mastered';
+        x.due = now() + x.ivl * DAY;
+        logEvent('review', id, x.st === 'solid' ? 'Закреплено' : 'Проверка пройдена');
+      } else {
+        x.st = x.lesson ? 'learning' : 'gap';
+        x.due = null; x.ivl = 0; x.streak = 0;
+        logEvent('lapse', id, 'Проверка не пройдена — тема вернулась в работу');
+      }
+      touchDay(); save();
+      return pass;
+    },
+
+    /* Готовность: доля графа, взвешенная по надёжности знания. */
+    readiness() {
+      const w = { solid: 1, mastered: 1, inferred: 0.7, learning: 0.35 };
+      return Math.round(100 * T.TOPICS.reduce((s, t) => s + (w[tp(t.id).st] || 0), 0) / T.TOPICS.length);
+    },
+    counts() {
+      const c = { done: 0, open: 0, inferred: 0, unknown: 0 };
+      T.TOPICS.forEach(t => {
+        const st = tp(t.id).st;
+        if (st === 'mastered' || st === 'solid') c.done++; else if (OPEN.has(st)) c.open++; else c[st]++;
+      });
+      return c;
+    },
+    /* Серия: сколько дней подряд (включая сегодня или вчера) была активность. */
+    streakDays() {
+      const set = new Set(S.days);
+      let ts = now(), n = 0;
+      if (!set.has(dayKey(ts))) ts -= DAY;
+      while (set.has(dayKey(ts))) { n++; ts -= DAY; }
+      return n;
+    },
+    nextDue() {
+      const ds = T.TOPICS.map(t => tp(t.id)).filter(x => x.due !== null && !OPEN.has(x.st)).map(x => x.due);
+      return ds.length ? Math.min(...ds) : null;
+    },
+    /* Для демонстрации интервальных повторений: сдвигает «сегодня» вперёд. */
+    advance(days) { S.offset += days * DAY; save(); },
+    _load(s) { S = sanitize(s); if (S) save(); return !!S; }
+  };
+
+  T.learner = L;
+})();

@@ -245,3 +245,78 @@ textarea { width: 100%; font: .8rem/1.4 ui-monospace, Consolas, monospace; paddi
 .simtable { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .simtable th, .simtable td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
 .simtable th { color: var(--ink-2); font-weight: 600; }
+
+/* ===== Tamyr Academy: обучение поверх диагностики ===== */
+:root { --learn: #2f67b1; --learn-soft: #dbe7f7; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --learn: #7aa9ea; --learn-soft: #1e2d45; } }
+:root[data-theme="dark"] { --learn: #7aa9ea; --learn-soft: #1e2d45; }
+
+.brand small { font-weight: 500; color: var(--ink-2); font-size: .85rem; }
+.stats b small { font-size: .55em; color: var(--ink-2); font-weight: 600; }
+.banner, .note { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 12px; padding: 12px 16px; }
+.note { background: var(--risk-soft); border-color: var(--risk); font-size: .92rem; }
+.row { margin-bottom: 8px; }
+.btn.danger { color: var(--gap); }
+.btn.danger:hover { border-color: var(--gap); }
+
+/* Карта: новые статусы */
+.n-learning rect { fill: var(--learn-soft); stroke: var(--learn); }
+.n-learning text { fill: var(--ink); }
+.n-solid rect { fill: var(--ok); stroke: var(--ink); stroke-width: 3; }
+.n-solid text { fill: #fff; }
+.n-root rect { stroke: var(--gap); stroke-width: 4; }
+.n-root.n-gap rect { fill: var(--gap); }
+.n-root.n-gap text { fill: #fff; }
+.n-root.n-learning rect { fill: var(--learn-soft); }
+.n-root.n-learning text { fill: var(--ink); }
+.due-badge { fill: var(--surface); stroke: var(--risk); stroke-width: 2; }
+.due-badge-t { fill: var(--ink) !important; font-size: 14px !important; font-weight: 800 !important; }
+.sw-learning { background: var(--learn-soft); border-color: var(--learn); }
+.sw-solid { background: var(--ok); border-color: var(--ink); }
+
+/* План на сегодня */
+.tasks { list-style: none; padding: 0; margin: 0; }
+.tasks li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+.tasks li:first-child { border-top: 0; padding-top: 4px; }
+.tasks .fix { display: block; color: var(--ink-2); font-size: .9rem; margin-top: 2px; }
+.k-lesson { background: var(--gap-soft); color: var(--ink); }
+.k-practice { background: var(--learn-soft); color: var(--ink); }
+.k-check { background: var(--risk-soft); color: var(--ink); }
+.plan li.learning::before { background: var(--learn-soft); color: var(--learn); }
+
+/* Урок */
+.worked { background: var(--surface-2); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+.task { font-size: 1.15rem; font-weight: 600; }
+.steps { margin: 0 0 12px; padding-left: 22px; display: grid; gap: 10px; }
+.steps li { padding-left: 4px; }
+.steps .say { display: block; color: var(--ink-2); font-size: .92rem; }
+.steps .mono { display: block; font-size: 1.02rem; }
+.takeaway { border-left: 4px solid var(--accent); padding-left: 12px; font-weight: 600; margin: 0; }
+
+/* Практика */
+.pips { display: inline-flex; gap: 6px; }
+.pips i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: var(--surface-2); }
+.pips i.on { background: var(--ok); border-color: var(--ok); }
+.hintbox { background: var(--risk-soft); border-radius: 12px; padding: 12px 16px; margin: 4px 0 12px; }
+.hintbox p { margin: 0 0 8px; }
+.hintbox p:last-child, .hintbox .steps:last-child { margin-bottom: 0; }
+.feedback { border-radius: 12px; padding: 14px 16px; margin: 6px 0 12px; background: var(--surface-2); border-left: 4px solid var(--gap); }
+.feedback.good { border-left-color: var(--ok); }
+.feedback h3 { margin-top: 12px; }
+.feedback .row { margin: 12px 0 0; }
+.opt:disabled { cursor: default; opacity: .75; }
+.opt.is-ok, .opt.is-bad { opacity: 1; }
+
+/* История */
+.log { list-style: none; padding: 0; margin: 0; }
+.log li { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.log li:first-child { border-top: 0; }
+.e-lapse b { color: var(--gap); }
+.e-mastered b, .e-review b { color: var(--ok); }
+
+@media (max-width: 640px) {
+  #home-graph, #map-graph { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #home-graph .graph, #map-graph .graph { min-width: 640px; }
+  .tasks li { flex-wrap: wrap; }
+  .log li { grid-template-columns: 1fr; gap: 0; }
+}
