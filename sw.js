@@ -1,10 +1,10 @@
 ﻿/* Service worker: после первого открытия приложение работает без интернета. */
-const CACHE = 'tamyr-v11';
+const CACHE = 'tamyr-v12';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest',
-  './css/style.css?v=10',
-  './js/data.js?v=10', './js/data-ent.js?v=10', './js/i18n.js?v=10', './js/engine.js?v=10', './js/content.js?v=10', './js/content-ent.js?v=10', './js/kk-ent.js?v=10', './js/kk.js?v=10', './js/learner.js?v=10', './js/graph.js?v=10',
-  './js/store.js?v=10', './js/app.js?v=10', './js/teacher.js?v=10',
+  './css/style.css?v=11',
+  './js/data.js?v=11', './js/data-ent.js?v=11', './js/i18n.js?v=11', './js/engine.js?v=11', './js/content.js?v=11', './js/content-ent.js?v=11', './js/kk-ent.js?v=11', './js/kk.js?v=11', './js/learner.js?v=11', './js/graph.js?v=11',
+  './js/store.js?v=11', './js/app.js?v=11', './js/teacher.js?v=11',
   './icons/icon-192.png', './icons/icon-512.png'
 ];
 
