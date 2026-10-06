@@ -97,6 +97,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 28px 16px 48px; outline: none
 .hero { padding: 24px 0 8px; }
 .hero h1 { max-width: 20ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.map-cta { margin: 4px 0 16px; }
 .how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 32px 0; }
 .step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .step span { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 700; margin-bottom: 10px; }
